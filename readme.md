@@ -11,7 +11,7 @@ dependencies:
 
 all of the above must be located in your PATH
 
-1. create folders `bin/`, `obj/` and `gfx/bin/`
-2. run `make` in the repo root
+to build:
+1. run `make` in the repo root
 
 build artifacts will go in `bin/`, `obj/`, and `src/res/`

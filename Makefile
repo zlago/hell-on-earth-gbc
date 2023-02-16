@@ -29,11 +29,24 @@ HDR_VER = 0
 ASM_REQS = $(patsubst src/%.sm83,obj/%.o,$(shell find src/ -name '*.sm83'))
 GFX_REQS = 
 
+.PHONY: all clean
+
 all: bin/${BIN_NAME}.gb
 
-obj/%.o: src/%.sm83 $(GFX_REQS)
+clean:
+	rm -rf bin/
+	rm -rf obj/
+	rm -rf src/res/
+
+bin/:
+	mkdir bin/
+
+obj/:
+	mkdir obj/
+
+obj/%.o: src/%.sm83 $(GFX_REQS) obj/
 	rgbasm ${ASM_FLAGS} -o $@ $<
 
-bin/${BIN_NAME}.gb: $(ASM_REQS) $(GFX_REQS)
+bin/${BIN_NAME}.gb: $(ASM_REQS) $(GFX_REQS) bin/
 	rgblink ${LINK_FLAGS} -m bin/${BIN_NAME}.map -n bin/${BIN_NAME}.sym -o $@ obj/*.o
 	rgbfix ${FIX_FLAGS} $@

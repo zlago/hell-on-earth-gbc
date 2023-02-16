@@ -13,6 +13,6 @@
 section "header", ROM0[$100]
 	di
 	jp Init
-	ds $150-@
+	ds $150-@, $00
 
 section "main", ROM0
