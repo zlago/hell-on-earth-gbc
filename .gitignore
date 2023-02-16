@@ -1,0 +1,13 @@
+# build artifacts
+bin/
+obj/
+src/res/
+# shortcuts and notes
+*.lnk
+*.txt
+bgb.bat
+concept/
+*.sublime-workspace
+*.sublime-project
+# not sure if this one will ever be used
+hh/
