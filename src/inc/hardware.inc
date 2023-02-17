@@ -35,6 +35,7 @@
 ;* Rev 4.7.0 - 27-Jun-22 : Added alternate names for some constants
 ;* Rev 4.7.1 - 05-Jul-22 : Added RPB_LED_ON constant
 ;* Rev 4.8.0 - 25-Oct-22 : Changed background addressing constants (zlago)
+;* rev 4.9.0 - 17-Feb-23 : rROMB, LCDCF_BG0/_BG1, LCDCF_WIN0/_WIN1 to save keystrokes (zlago, this repo only)
 
 
 ; NOTE: REVISION NUMBER CHANGES MUST BE REFLECTED
@@ -112,6 +113,7 @@ DEF CART_SRAM_DISABLE EQU $00
 ; -- varies depending on the MBC.
 ; --
 DEF rROMB0 EQU $2000
+DEF rROMB EQU rROMB0 ; i cant be bothered typing the 0 each time
 
 ; --
 ; -- RAMB ($4000-$5FFF)
@@ -530,12 +532,16 @@ DEF LCDCF_OFF     EQU %00000000 ; LCD Control Operation
 DEF LCDCF_ON      EQU %10000000 ; LCD Control Operation
 DEF LCDCF_WIN9800 EQU %00000000 ; Window Tile Map Display Select
 DEF LCDCF_WIN9C00 EQU %01000000 ; Window Tile Map Display Select
+DEF LCDCF_WIN0 EQU LCDCF_WIN9800; same as above
+DEF LCDCF_WIN1 EQU LCDCF_WIN9C00; same as above
 DEF LCDCF_WINOFF  EQU %00000000 ; Window Display
 DEF LCDCF_WINON   EQU %00100000 ; Window Display
 DEF LCDCF_BLK21   EQU %00000000 ; BG & Window Tile Data Select
 DEF LCDCF_BLK01   EQU %00010000 ; BG & Window Tile Data Select
 DEF LCDCF_BG9800  EQU %00000000 ; BG Tile Map Display Select
 DEF LCDCF_BG9C00  EQU %00001000 ; BG Tile Map Display Select
+DEF LCDCF_BG0  EQU LCDCF_BG9800 ; same as above
+DEF LCDCF_BG1  EQU LCDCF_BG9C00 ; same as above
 DEF LCDCF_OBJ8    EQU %00000000 ; OBJ Construction
 DEF LCDCF_OBJ16   EQU %00000100 ; OBJ Construction
 DEF LCDCF_OBJOFF  EQU %00000000 ; OBJ Display
