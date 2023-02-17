@@ -4,7 +4,7 @@ ASM_FLAGS  = -h -Wall -p ${PAD_VAL} $(addprefix -I,${INC_PATHS}) $(addprefix -D,
 LINK_FLAGS = -p ${PAD_VAL}
 FIX_FLAGS  = -v -l 0x33 -j -C -t ${HDR_TITLE} -k ${HDR_LICENSEE} -m ${HDR_MBC} -r ${HDR_RAM} -n ${HDR_VER} -p ${PAD_VAL}
 # include paths
-INC_PATHS = src/inc/ src/res/
+INC_PATHS = src/inc/ src/res/ res/
 # (string?) constants for rgbasm
 DEFINES = 
 # pad value
@@ -40,7 +40,7 @@ all: bin/${BIN_NAME}.gbc bin/${BIN_NAME}-dev.gbc
 clean:
 	rm -rf bin/
 	rm -rf obj/
-	rm -rf src/res/
+	rm -rf res/
 
 bin/:
 	mkdir bin/

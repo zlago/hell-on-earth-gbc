@@ -1,7 +1,7 @@
 # build artifacts
 bin/
 obj/
-src/res/
+res/
 # shortcuts and notes
 *.lnk
 *.txt

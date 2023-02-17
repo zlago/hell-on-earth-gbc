@@ -1,6 +1,6 @@
-### hell
+### hell (placeholder title)
 
-hell if i know
+hopefully a (GBC only) game
 
 ### compiling
 
@@ -14,4 +14,4 @@ all of the above must be located in your PATH
 to build:
 1. run `make` in the repo root
 
-build artifacts will go in `bin/`, `obj/`, and `src/res/`
+build artifacts will go in `bin/`, `obj/`, and `src/`
