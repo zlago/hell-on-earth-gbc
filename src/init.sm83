@@ -41,7 +41,7 @@ xWrongConsole: ; puts a tiny "GBC-only" text in the center of the screen
 	ld bc, 8
 	call SafeCpy
 	; init palette, LCDC and scroll
-	ld a, $f0
+	ld a, PALETTE_DMG
 	ldh [rBGP], a
 	ld a, LCDCF_ON|LCDCF_BGON|LCDCF_BLK21|LCDCF_BG1
 		; this is arbitrary as hell just to save 4 bytes
@@ -69,10 +69,10 @@ dw `#...#.#.
 dw `#.#.##..
 dw `.##.###.
 ds 8, $00
-dw `.#......; "C-"
+dw `.##.....; "C-"
 dw `#.......
-dw `#..###.#
-dw `.#......
+dw `#...##.#
+dw `.##.....
 ds 8, $00
 dw `......##;"onl"
 dw `#..##..#

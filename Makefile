@@ -27,7 +27,7 @@ HDR_VER = 0
 
 # dependencies
 ASM_REQS = $(patsubst src/%.sm83,obj/%.o,$(shell find src/ -name '*.sm83'))
-GFX_REQS = 
+GFX_REQS = res/map.bin res/tileset.2bpp
 
 .PHONY: all release dev clean
 
@@ -47,6 +47,15 @@ bin/:
 
 obj/:
 	mkdir obj/
+
+res/:
+	mkdir res/
+
+res/map.bin: src/res/map.png res/tileset.2bpp src/res/base.dpal
+	superfamiconv map --mode gb -t res/tileset.2bpp -p src/res/base.dpal -i $< -d $@
+
+res/tileset.2bpp: src/res/tileset.png
+	rgbgfx -c "#000, #00f, #0ff, #fff" -o $@ $<
 
 obj/%.o: src/%.sm83 $(GFX_REQS) obj/
 	rgbasm ${ASM_FLAGS} -o $@ $<
