@@ -51,11 +51,47 @@ Main::
 	call LoadMap
 .loop
 	call Joy
-	call Player
+	call MovePlayer
 	jr .loop
 
 section "player", rom0
-Player:
+MovePlayer:
+	; check if player wants to move
+	ld a, [hPad1]
+	ld b, a
+	ldh a, [hPad1.diff]
+	and b
+	and $f0
+	ret z
+	; if so, move
+	ld b, a
+	ld c, 0
+	; vertically
+		ld a, [wxActor.y]
+		ld d, a
+		; down
+		sla b
+		adc c
+		; up
+		sla b
+		sbc c
+		ld [wxActor.y], a
+		xor d
+		and $f0
+		call nz, LoadMap
+	; horizontally
+		ld a, [wxActor.x]
+		ld d, a
+		; left
+		sla b
+		sbc c
+		; right
+		sla b
+		adc c
+		ld [wxActor.x], a
+		xor d
+		and $f0
+		call nz, LoadMap
 	ret
 
 section "loadmap", rom0
