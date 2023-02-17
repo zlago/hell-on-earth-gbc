@@ -1,3 +1,76 @@
+; various types of init go here
+
+include "hardware.inc"
+include "macros.inc"
+include "defines.inc"
+
 section "init", ROM0
-Init::
-	jr @
+ConsoleCheck:: ; check console
+	cp BOOTUP_A_CGB
+	jr z, Init
+	; not gbc, jump to ROMX and lock up
+	ld a, BANK(xWrongConsole)
+	ld [rROMB], a
+	jp xWrongConsole
+Init:: ; jump to ROMX to continue init
+	ld a, BANK(xInit)
+	ld [rROMB], a
+	jp xInit
+
+section "xinit", ROMX
+xInit: ; now we can write sloppy code and no
+	;one can complain about the ROM we waste!
+	ld sp, wStack.origin ; init sp to a saner place
+
+	jp Title
+
+section "xwrongconsole", ROMX
+xWrongConsole: ; puts a tiny "GBC-only" text in the center of the screen
+	ld hl, .gfx
+	ld de, _VRAM+$1000+$10
+	ld bc, .gfxEnd - .gfx
+	call SafeCpy
+	ld hl, .inc
+	ld de, _SCRN1+SCRN_VX_B*8+8
+	ld bc, 8
+	call SafeCpy
+	ld a, $f0
+	ldh [rBGP], a
+	ld a, LCDCF_ON|LCDCF_BGON|LCDCF_BLK21|LCDCF_BG1
+	ldh [rLCDC], a
+	xor a
+	ldh [rIE], a
+	ldh [rSCX], a
+	ldh [rSCY], a
+	ei
+:	halt
+	jr :-
+
+.inc ; tilemap for .gfx
+db 1,2,3,4
+.gfx ; tiles that spell out "GBC-only"
+pusho
+opt g.xX#
+dw `.##.##..
+dw `#...#.#.
+dw `#.#.##..
+dw `.##.###.
+ds 8, $00
+dw `.#......
+dw `#.......
+dw `#..###.#
+dw `.#......
+ds 8, $00
+dw `......##
+dw `#..##..#
+dw `.#.#.#.#
+dw `#..#.#.#
+ds 8, $00
+dw `........
+dw `.#.#....
+dw `.#.#....
+dw `..##....
+dw `.##.....
+ds 6, $00
+.gfxEnd
+popo

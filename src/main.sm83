@@ -10,9 +10,16 @@
 ; /___/  /___//_________//_________//_________/
 ; honestly i just dont know how to name this
 
+section "crash", ROM0[$38]
+zCrash:
+	ld b, b
+	jr @
+
 section "header", ROM0[$100]
 	di
-	jp Init
+	jp ConsoleCheck
 	ds $150-@, $00
 
-section "main", ROM0
+section "title", ROM0
+Title::
+	jr @
