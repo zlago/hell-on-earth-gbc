@@ -14,16 +14,124 @@ include "hardware.inc"
 include "macros.inc"
 include "defines.inc"
 
-section "crash", ROM0[$38]
+section "crash", rom0[$38]
 zCrash:
 	ld b, b
 	jr @
 
-section "header", ROM0[$100]
+section "header", rom0[$100]
 	di
 	jp ConsoleCheck
 	ds $150-@, $00
 
-section "title", ROM0
+section "title", rom0
 Title::
-	jr @
+	jp Main
+.loop
+
+section "main", rom0
+Main::
+	; set player position
+	ld a, bank(wxActor)
+	ldh [rSMBK], a
+	ld a, START_Y
+	ld [wxActor.y], a
+	if START_X != START_Y
+		ld a, START_X
+	endc
+	ld [wxActor.x], a
+	; load tileset
+	ld a, bank(Tileset2bpp)
+	ld [rROMB], a
+	ld hl, Tileset2bpp
+	ld de, _VRAM+$1000
+	ld bc, Tileset2bpp.end - Tileset2bpp
+	call SafeCpy
+	; load the map
+	call LoadMap
+.loop
+	call Joy
+	call Player
+	jr .loop
+
+section "player", rom0
+Player:
+	ret
+
+section "loadmap", rom0
+LoadMap::
+	; fetch screen to load
+	ld a, bank(wxActor)
+	ldh [rSMBK], a
+	ld a, [wxActor.x]
+	and $f0
+	swap a
+	ld b, a
+	ld a, [wxActor.y]
+	and $f0
+	or b
+	ld b, a
+	; fetch the bank
+	rlca
+	rlca
+	or %11111100
+		assert low(MapLut) == %11111100
+	ld l, a
+	ld h, HIGH(MapLut)
+	ld a, [hl]
+	ld [rROMB], a
+	; load the map address into hl
+	ld a, b
+	res 7, a
+	set 6, a
+		assert Map1 >> 14 == %01
+	ld h, a
+	xor a
+	ld l, a
+	; load c and de
+	ld c, 16 ; couldnt come up with a constant for this
+	ld de, _SCRN0
+	; copy
+	ld b, 16/2
+	push hl
+	.row ; copy a row
+		.wait
+		ldh a, [rSTAT]
+		and STATF_BUSY
+		jr .wait
+		rept 2
+			ld a, [hl+]
+			ld [de], a
+			inc e
+			endr
+		dec b
+		jr nz, .row
+
+	pop hl
+
+
+	ret
+
+section "actors", WRAMX, align[8]
+wxActor::
+	.type ds 1
+	.y    ds 1
+	.x    ds 1
+.next ds 256*(MAX_ACTORS-1)
+
+section "tileset", romx
+Tileset2bpp:
+	incbin "tileset.2bpp"
+	.end
+
+for V, 4
+section "map{x:V}", romx
+Map{x:V}::
+	incbin "map.bin", V*(2^14), 2^14
+endr
+
+section "maplut", rom0, align[8,low(-4)]
+MapLut::
+for V, 4
+	db bank(Map{x:V})
+endr

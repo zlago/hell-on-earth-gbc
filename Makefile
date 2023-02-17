@@ -6,7 +6,7 @@ FIX_FLAGS  = -v -l 0x33 -j -C -t ${HDR_TITLE} -k ${HDR_LICENSEE} -m ${HDR_MBC} -
 # include paths
 INC_PATHS = src/inc/ src/res/ res/
 # (string?) constants for rgbasm
-DEFINES = 
+DEFINES = ${CONFIG}
 # pad value
 PAD_VAL = 0xFF
 
@@ -14,7 +14,7 @@ PAD_VAL = 0xFF
 # filename for the binary
 BIN_NAME = hell
 # name for the header
-HDR_TITLE = "HELL"
+HDR_TITLE = "HON (DEMO)"
 # new licensee code
 HDR_LICENSEE = "ZS"
 # mapper used

@@ -68,13 +68,32 @@ ShortSet:: ; a - data, hl - dest, b - length
 	ret
 
 SECTION "palcpy", ROM0
-PalCpy:: ; hl - src, a - AUTOINC | dest, c - OCPS/BCPS, b - length (bytes!!)
+PalCpy:: ; hl - src, a - F_AUTOINC | dest, c - rOCPS/rBCPS, b - length
 	; set addr
 	ldh [c], a
 	inc c
 .loop ; copy a byte
 	ld a, [hl+]
 	ldh [c], a ; pal
+	; dec length
+	dec b
+	jr nz, .loop
+	ret
+
+	SECTION "safepalcpy", ROM0
+SafePalCpy:: ; hl - src, a - F_AUTOINC | dest, c - rOCPS/rBCPS, b - length / 4
+	; set addr
+	ldh [c], a
+	inc c
+.loop ; wait for access
+	ldh a, [rSTAT]
+	and STATF_BUSY
+	jr nz, .loop
+	; copy 4 bytes
+	rept 4
+		ld a, [hl+]
+		ldh [c], a ; pal
+		endr
 	; dec length
 	dec b
 	jr nz, .loop

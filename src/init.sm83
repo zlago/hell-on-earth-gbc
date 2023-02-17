@@ -4,31 +4,49 @@ include "hardware.inc"
 include "macros.inc"
 include "defines.inc"
 
-section "init", ROM0
+section "init", rom0
 ConsoleCheck:: ; this will be ran at bootup
 	; check console
 	cp BOOTUP_A_CGB ; check console
 	jr z, Init
 	; not GBC, jump to ROMX, display error and lock up
-	ld a, BANK(xWrongConsole)
+	ld a, bank(xWrongConsole)
 	ld [rROMB], a
 	jp xWrongConsole
 Init:: ; this will be ran on software reset
 	; GBC, jump to ROMX to continue init
-	ld a, BANK(xInit)
+	ld a, bank(xInit)
 	ld [rROMB], a
+	; load palette
+	ld a, BCPSF_AUTOINC | 0
+	ld hl, Palette
+	lb bc, (Palette.end - Palette) / 4, low(rBCPS)
+	push af
+	push hl
+	call SafePalCpy
+	pop hl
+	pop af
+	lb bc, (Palette.end - Palette) / 4, low(rOCPS)
+	call SafePalCpy
 	jp xInit
 
 section "xinit", ROMX
 xInit: ; now we can write sloppy code and no
 	; one can complain about the ROM we waste!
 	ld sp, wStack.origin ; init sp to a saner place
-
+	; zero-init variables
+	xor a
+	ldh [hPad1], a
+	ldh [hPad1.diff], a
 	jp Title
+
+Palette:
+	incbin "palette.pal"
+	.end
 
 /* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
 
-section "xwrongconsole", ROMX
+section "xwrongconsole", romx
 xWrongConsole: ; puts a tiny "GBC-only" text in the center of the screen
 	; load "GBC-only" tiles into VRAM
 	ld hl, .gfx

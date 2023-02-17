@@ -1,1 +1,6 @@
+; basically unused
 DEF PALETTE_DMG EQU $3f
+; game related
+DEF START_X EQU $88
+DEF START_Y EQU $88
+DEF MAX_ACTORS EQU 16

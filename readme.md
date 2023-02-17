@@ -1,4 +1,4 @@
-### hell (placeholder title)
+### hell on earth (placeholder title)
 
 hopefully a (GBC only) game
 
@@ -14,4 +14,16 @@ all of the above must be located in your PATH
 to build:
 1. run `make` in the repo root
 
-build artifacts will go in `bin/`, `obj/`, and `src/`
+file structure:
+
+`bin/` binaries
+
+`obj/` assembly artifacts
+
+`res/` asset conversion artifacts
+
+`src/` source (RGBDS assembly files)
+
+`src/inc/` include files
+
+`src/res` assets
