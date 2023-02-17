@@ -34,6 +34,11 @@ section "xinit", ROMX
 xInit: ; now we can write sloppy code and no
 	; one can complain about the ROM we waste!
 	ld sp, wStack.origin ; init sp to a saner place
+	; init LCDC
+	ld a, LCDCF_ON|LCDCF_BGON|LCDCF_WINON|LCDCF_OBJON|LCDCF_BLK21|LCDCF_BG0|LCDCF_WIN1|LCDCF_OBJ8
+	ldh [rLCDC], a
+	ld a, $ff
+	ldh [rWY], a
 	; zero-init variables
 	xor a
 	ldh [hPad1], a

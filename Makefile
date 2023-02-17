@@ -51,10 +51,10 @@ obj/:
 res/:
 	mkdir res/
 
-res/map.bin: src/res/map.png res/tileset.2bpp src/res/base.dpal
+res/map.bin: src/res/map.png res/tileset.2bpp src/res/base.dpal res/
 	superfamiconv map --mode gb -t res/tileset.2bpp -p src/res/base.dpal -i $< -d $@
 
-res/tileset.2bpp: src/res/tileset.png
+res/tileset.2bpp: src/res/tileset.png res/
 	rgbgfx -c "#000, #00f, #0ff, #fff" -o $@ $<
 
 obj/%.o: src/%.sm83 $(GFX_REQS) obj/

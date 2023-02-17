@@ -60,18 +60,12 @@ Player:
 
 section "loadmap", rom0
 LoadMap::
-	; fetch screen to load
+	; fetch the screen bank
 	ld a, bank(wxActor)
 	ldh [rSMBK], a
-	ld a, [wxActor.x]
-	and $f0
-	swap a
-	ld b, a
 	ld a, [wxActor.y]
 	and $f0
-	or b
 	ld b, a
-	; fetch the bank
 	rlca
 	rlca
 	or %11111100
@@ -86,30 +80,41 @@ LoadMap::
 	set 6, a
 		assert Map1 >> 14 == %01
 	ld h, a
-	xor a
+	ld a, [wxActor.x]
+	and $f0
 	ld l, a
 	; load c and de
 	ld c, 16 ; couldnt come up with a constant for this
 	ld de, _SCRN0
-	; copy
-	ld b, 16/2
-	push hl
+	.column ; copy a column of rows
+		ld b, b
+		ld b, 16/2 ; or this
+		push hl
 	.row ; copy a row
-		.wait
+		.wait ; wait for safe access
 		ldh a, [rSTAT]
 		and STATF_BUSY
-		jr .wait
-		rept 2
+		jr nz, .wait
+		rept 2 ; copy two bytes
 			ld a, [hl+]
 			ld [de], a
 			inc e
 			endr
 		dec b
 		jr nz, .row
-
-	pop hl
-
-
+	; adjust for the next row
+		; hl
+		pop hl
+		inc h
+		; de
+		ld a, e
+		add 15
+		ld e, a
+		inc de
+		; then decrement counter
+		dec c
+		jr nz, .column
+	; done
 	ret
 
 section "actors", WRAMX, align[8]
@@ -127,7 +132,7 @@ Tileset2bpp:
 for V, 4
 section "map{x:V}", romx
 Map{x:V}::
-	incbin "map.bin", V*(2^14), 2^14
+	incbin "map.bin", V*(2**14), 2**14
 endr
 
 section "maplut", rom0, align[8,low(-4)]
