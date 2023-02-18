@@ -62,9 +62,8 @@ xInit: ; now we can write sloppy code and no
 	lb bc, (Palette.end - Palette) / 4, low(rOCPS)
 	call SafePalCpy
 	; hack
-	ld a, $19
+	xor a
 	ld [wSOAM+2], a
-	ld a, $07
 	ld [wSOAM+3], a
 	jp Title
 

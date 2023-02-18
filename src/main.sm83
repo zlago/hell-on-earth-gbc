@@ -51,11 +51,16 @@ Main::
 	endc
 	ld [wxActor.x], a
 	; load tileset
-	ld a, bank(Tileset2bpp)
+	ld a, bank(xTileset2bpp)
 	ld [rROMB], a
-	ld hl, Tileset2bpp
+	ld hl, xTileset2bpp
 	ld de, _VRAM+$1000
-	ld bc, Tileset2bpp.end - Tileset2bpp
+	ld bc, xTileset2bpp.end - xTileset2bpp
+	call SafeCpy
+	; load player
+	ld hl, xPlayer2bpp
+	ld de, _VRAM
+	ld bc, xPlayer2bpp.end - xPlayer2bpp
 	call SafeCpy
 	; load the map
 	call LoadMap
@@ -171,13 +176,13 @@ FetchMapTile:: ; h - Y, l - X, rROMB = bank, hl = tile, clobbers de
 	or %11111100
 		assert low(MapLut) == %11111100
 	ld e, a
-	ld d, HIGH(MapLut)
+	ld d, high(MapLut)
 	ld a, [de]
 	ld [rROMB], a
 	; adjust h
 	res 7, h
 	set 6, h
-		assert high(Map1)  == (%0<<7) | (%1<<6)
+		assert high(xMap1)  == (%0<<7) | (%1<<6)
 	ret
 
 section "loadmap", rom0
@@ -253,18 +258,21 @@ wxActor::
 .next ds 256*(MAX_ACTORS-1)
 
 section "tileset", romx
-Tileset2bpp:
+xTileset2bpp:
 	incbin "tileset.2bpp"
+	.end
+xPlayer2bpp:
+	incbin "player.2bpp"
 	.end
 
 for V, 4
 section "map{x:V}", romx
-Map{x:V}::
+xMap{x:V}::
 	incbin "map.bin", V*(2**14), 2**14
 endr
 
 section "maplut", rom0, align[8,low(-4)]
 MapLut::
 for V, 4
-	db bank(Map{x:V})
+	db bank(xMap{x:V})
 endr

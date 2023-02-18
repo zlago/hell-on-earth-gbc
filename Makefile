@@ -27,7 +27,7 @@ HDR_VER = 0
 
 # dependencies
 ASM_REQS = $(patsubst src/%.sm83,obj/%.o,$(shell find src/ -name '*.sm83'))
-GFX_REQS = res/map.bin res/tileset.2bpp
+GFX_REQS = res/map.bin res/tileset.2bpp res/player.2bpp
 
 .PHONY: all release dev clean
 
@@ -56,6 +56,9 @@ res/map.bin: src/res/map.png res/tileset.2bpp src/res/base.dpal res/
 
 res/tileset.2bpp: src/res/tileset.png res/
 	rgbgfx -c "#000, #00f, #0ff, #fff" -o $@ $<
+
+res/player.2bpp: src/res/player.png res/
+	rgbgfx -c "#00f, #0ff, #000, #fff" -o $@ $<
 
 obj/%.o: src/%.sm83 $(GFX_REQS) obj/
 	rgbasm ${ASM_FLAGS} -o $@ $<
