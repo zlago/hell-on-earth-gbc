@@ -15,7 +15,7 @@
 INCLUDE "hardware.inc" ; hardware definitions, really important
 INCLUDE "macros.inc" ; helps with readability, at least a bit
 
-SECTION "memcpy", ROM0
+section "memcpy", rom0
 MemCpy:: ; hl - src, de - dest, bc - length
 	; adjust for decloop
 	dec bc
@@ -32,7 +32,7 @@ MemCpy:: ; hl - src, de - dest, bc - length
 	jr nz, .loop
 	ret
 
-SECTION "shortcpy", ROM0
+section "shortcpy", rom0
 ShortCpy:: ; hl - src, de - dest, b - length
 .loop ; copy a byte
 	ld a, [hl+]
@@ -43,7 +43,7 @@ ShortCpy:: ; hl - src, de - dest, b - length
 	jr nz, .loop
 	ret
 
-SECTION "memset", ROM0
+section "memset", rom0
 MemSet:: ; a - data, hl - dest, bc - length, clobbers e
 	; adjust bc
 	dec bc
@@ -58,7 +58,7 @@ MemSet:: ; a - data, hl - dest, bc - length, clobbers e
 	jr nz, .loop
 	ret
 
-SECTION "shortset", ROM0
+section "shortset", rom0
 ShortSet:: ; a - data, hl - dest, b - length
 .loop ; copy a byte, short as fu-
 	ld [hl+], a
@@ -67,7 +67,7 @@ ShortSet:: ; a - data, hl - dest, b - length
 	jr nz, .loop
 	ret
 
-SECTION "palcpy", ROM0
+section "palcpy", rom0
 PalCpy:: ; hl - src, a - F_AUTOINC | dest, c - rOCPS/rBCPS, b - length
 	; set addr
 	ldh [c], a
@@ -80,7 +80,7 @@ PalCpy:: ; hl - src, a - F_AUTOINC | dest, c - rOCPS/rBCPS, b - length
 	jr nz, .loop
 	ret
 
-	SECTION "safepalcpy", ROM0
+	section "safepalcpy", rom0
 SafePalCpy:: ; hl - src, a - F_AUTOINC | dest, c - rOCPS/rBCPS, b - length / 4
 	; set addr
 	ldh [c], a
@@ -99,7 +99,7 @@ SafePalCpy:: ; hl - src, a - F_AUTOINC | dest, c - rOCPS/rBCPS, b - length / 4
 	jr nz, .loop
 	ret
 
-SECTION "safecpy", ROM0
+section "safecpy", rom0
 SafeCpy:: ; hl - src, de - dest, bc - length, align 1!!
 	; adjust for unroll (2), then adjust bc
 	srl b
@@ -125,13 +125,13 @@ SafeCpy:: ; hl - src, de - dest, bc - length, align 1!!
 	jr nz, .loop
 	ret
 
-SECTION "safeset", ROM0
+section "safeset", rom0
 SafeSet:: ; a - data, hl - dest, bc - length, clobbers e, align 2!!
 	; adjust for unroll (4), then adjust bc
-	REPT 2
+	rept 2
 		srl b
 		rr c
-		ENDR
+		endr
 	dec bc
 		inc b
 		inc c
@@ -157,7 +157,7 @@ SafeSet:: ; a - data, hl - dest, bc - length, clobbers e, align 2!!
 ; pops values off the stack, as its faster for
 ; copying lots of data (32 bytes or more)
 ; unfortunately it needs disabled interrupts
-SECTION "popslide", ROM0
+section "popslide", rom0
 Popslide:: ; a - length, hl - src, de - dest, clobbers bc, align 4!!
 	ld [wStack], sp ; save sp
 	; PLEASE make sure IME=0
@@ -165,17 +165,17 @@ Popslide:: ; a - length, hl - src, de - dest, clobbers bc, align 4!!
 	ld h, d
 	ld l, e
 	.loop
-	FOR V, 16/2
+	for V, 16/2
 		pop bc
 		ld [hl], c
 		inc l
 		ld [hl], b
-		IF V == 7
+		if V == 7
 			inc hl
-		ELSE
+		else
 			inc l
-		ENDC
-	ENDR
+		endc
+	endr
 	dec a
 	jr nz, .loop
 	ld sp, wStack
@@ -183,9 +183,9 @@ Popslide:: ; a - length, hl - src, de - dest, clobbers bc, align 4!!
 	ld sp, hl
 	ret
 
-SECTION "DMA", ROM0
+section "DMA", rom0
 DMAcopy:: ; copy this to HRAM then call hDMA
-LOAD "hDMA", HRAM
+load "hDMA", hram
 hDMA:: ; a = high(ShadowOAM)
 	ldh [rDMA], a
 	ld a, 40
@@ -194,22 +194,22 @@ hDMA:: ; a = high(ShadowOAM)
 	jr nz, .wait
 	ret
 	.end::
-ENDL
+endl
 
 ; allocate shadow OAM
-SECTION "shadowOAM", WRAM0, ALIGN[8]
+section "shadowOAM", wram0, align[8]
 	wSOAM:: ds 160
 	.index:: ds 1
 	.end::
 
-if DEF(PLAYERS) == 0
-	DEF PLAYERS EQUS "1" ; default to 1 player
+if def(PLAYERS) == 0
+	def PLAYERS equs "1" ; default to 1 player
 endc
 
-SECTION "joy", ROM0 ; wow this is such a mess
+section "joy", rom0 ; wow this is such a mess
 Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers (b)c, hl
 	ld hl, hPad1
-	ld c, LOW(rP1)
+	ld c, low(rP1)
 .loop
 	ld e, [hl] ; preserve for later
 	ldh a, [c] ; get Dpad
@@ -235,7 +235,7 @@ Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers (b)c, hl
 	endc
 	ret
 
-SECTION "joypads", HRAM
+section "joypads", hram
 for V, 1, PLAYERS+1
 	hPad{x:V}:: ds 1
 	.diff:: ds 1
@@ -243,9 +243,9 @@ endr
 
 ; someone please if youre reading this remind me to
 ; rewrite this entire thing at some point or something
-SECTION "packet", ROM0 ; this looks like a mess..
+section "packet", rom0 ; this looks like a mess..
 Packet:: ; sends an SGB packet, hl - src
-	lb bc, 16, LOW(rP1)
+	lb bc, 16, low(rP1)
 	xor a
 		ldh [c], a ; 5 cycles
 	ld a, $ff ; end pulse
@@ -262,9 +262,9 @@ Packet:: ; sends an SGB packet, hl - src
 				adc a, a
 				inc a
 				swap a
-				REPT 2
+				rept 2
 					nop
-					ENDR
+					endr
 				ldh [c], a ; 5 cycles
 			ld a, $ff ; end pulse
 				nop
@@ -274,22 +274,22 @@ Packet:: ; sends an SGB packet, hl - src
 		dec b
 		jr nz, .byte
 	ld a, $20 ; stop bit
-		REPT 6
+		rept 6
 			nop
-			ENDR
+			endr
 		ldh [c], a
 	ld a, $ff ; hi?
 		nop
 		;nop
 		ldh [c], a
 	ld a, P1F_GET_DPAD ; reselect buttons
-		REPT 11
+		rept 11
 			nop
-			ENDR
+			endr
 		ldh [c], a
 	ret
 
-SECTION "multiply", ROM0
+section "multiply", rom0
 ; unsigned multiplication,
 ; using (if im not mistaken) binary long multiplication
 ; this takes * 12MSSBb + BS + 22 M-cycles (up to 114 M-cycles)
@@ -311,7 +311,7 @@ Multiply:: ; hl = b * c, clobbers a (a = 0)
 	jr nz, .loop
 	ret
 
-SECTION "divide", ROM0
+section "divide", rom0
 ; unsigned division,
 ; using binary long division
 ; big thanks to calc84maniac for pointing out a "nonbinding" optimization
@@ -343,8 +343,8 @@ Divide:: ; hl = hl / a, a = hl % a, clobbers de
 	ret
 	endr
 
-SECTION "crc", ROM0
-DEF CRC32_POLY EQU $EDB88320 ; reflected $04c11db7
+section "crc", rom0
+def CRC32_POLY equ $EDB88320 ; reflected $04c11db7
 ; this would be crc32ccitt if it was actually fucking
 ; properly documented i am so fucking mad who the fuck
 ; even wrote the god damn documentation
@@ -375,12 +375,12 @@ Crc32::
 	push bc ; save byte counter
 	ld b, 8 ; use b as bit counter instead
 .shift ; shift the buffer
-	ld l, LOW(wCrc.input)
+	ld l, low(wCrc.input)
 	for V, 5
 		rr [hl]
 		if V < 4
 			inc l
-				ASSERT HIGH(wCrc) == HIGH(wCrc.end)
+				assert high(wCrc) == high(wCrc.end)
 		endc
 	endr
 	jr c, .divide ; check for overflow
@@ -390,10 +390,10 @@ Crc32::
 	jr .load ; if out of bits load next byte
 
 .divide ; divide buffer
-	ld l, LOW(wCrc.crc)
+	ld l, low(wCrc.crc)
 	for V, 4 ; xor each byte with the polynomial
 		ld a, [hl]
-		xor LOW(CRC32_POLY>>((3-V)*8))
+		xor low(CRC32_POLY>>((3-V)*8))
 		ld [hl+], a
 	endr
 	dec b ; decrement bit count
@@ -402,9 +402,9 @@ Crc32::
 	jr .load ; if out of bits load next byte
 
 .end ; make hl point at the checksum
-		ld l, LOW(wCrc.end)
+		ld l, low(wCrc.end)
 		ld b, 4
-			ASSERT wCrc.end - 4 == wCrc.crc
+			assert wCrc.end - 4 == wCrc.crc
 			; make sure that hl will be wCrc.crc when returning
 		.outXorLoop ; bitflip the checksum
 		dec l
@@ -415,7 +415,7 @@ Crc32::
 		jr nz, .outXorLoop
 	ret
 
-SECTION "crcram", WRAM0, ALIGN[3]
+section "crcram", wram0, align[3]
 wCrc::
 	.input ds 1 ; 8 bit buffer for bit by bit input processing
 	.crc   ds 4 ; 32 bit buffer for processing the CRC
@@ -423,10 +423,10 @@ wCrc::
 
 ; allocate a stack
 ; if no stack size passed, default to 32
-if ISCONST(STACK_SIZE) != 1 || DEF(STACK_SIZE) != 1
-	DEF STACK_SIZE EQU 32
+if ISCONST(STACK_SIZE) != 1 || def(STACK_SIZE) != 1
+	def STACK_SIZE equ 32
 endc
 
-SECTION "stack", WRAM0[$d000-(STACK_SIZE*2)] ; put the stack at the end
+section "stack", wram0[$d000-(STACK_SIZE*2)] ; put the stack at the end
 wStack:: ds (STACK_SIZE*2) ; stack operates on words
 .origin:: ; ld sp, stack.origin

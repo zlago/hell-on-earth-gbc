@@ -30,7 +30,7 @@ Init:: ; this will be ran on software reset
 	call SafePalCpy
 	jp xInit
 
-section "xinit", ROMX
+section "xinit", romx
 xInit: ; now we can write sloppy code and no
 	; one can complain about the ROM we waste!
 	ld sp, wStack.origin ; init sp to a saner place

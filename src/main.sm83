@@ -75,6 +75,7 @@ MovePlayer:
 		; up
 		sla b
 		sbc c
+		call CollideMap
 		ld [wxActor.y], a
 		xor d
 		and $f0
@@ -94,31 +95,40 @@ MovePlayer:
 		call nz, LoadMap
 	ret
 
-section "loadmap", rom0
-LoadMap::
-	; fetch the screen bank
-	ld a, bank(wxActor)
-	ldh [rSMBK], a
-	ld a, [wxActor.y]
-	and $f0
-	ld b, a
+section "fetchmaptile", rom0 ; name possibly misleading?
+FetchMapTile:: ; h - Y, l - X, rROMB = bank, hl = tile, clobbers de
+	; since hl is practically already pointing to the
+	; tile we only need to actually fetch the bank
+	; fetch and switch to bank
+	ld a, h
 	rlca
 	rlca
 	or %11111100
 		assert low(MapLut) == %11111100
-	ld l, a
-	ld h, HIGH(MapLut)
-	ld a, [hl]
+	ld e, a
+	ld d, HIGH(MapLut)
+	ld a, [de]
 	ld [rROMB], a
-	; load the map address into hl
-	ld a, b
-	res 7, a
-	set 6, a
-		assert Map1 >> 14 == %01
+	; adjust h
+	res 7, h
+	set 6, h
+		assert high(Map1)  == (%0<<7) | (%1<<6)
+	ret
+
+section "loadmap", rom0
+LoadMap::
+	ld a, bank(wxActor)
+	ldh [rSMBK], a
+	; fetch the screen bank
+	ld a, [wxActor.y]
+	and $f0
+	ldh [hCamera.y], a
 	ld h, a
 	ld a, [wxActor.x]
 	and $f0
+	ldh [hCamera.x], a
 	ld l, a
+	call FetchMapTile
 	; load c and de
 	ld c, 16 ; couldnt come up with a constant for this
 	ld de, _SCRN0
@@ -153,7 +163,17 @@ LoadMap::
 	; done
 	ret
 
-section "actors", WRAMX, align[8]
+section "hram", hram
+hCamera::
+	.y ds 1 ; y position of camera
+	.x ds 1 ; x position of camera
+
+section "collidemap", rom0
+CollideMap::
+	; done
+	ret
+
+section "actors", wramx, align[8]
 wxActor::
 	.type ds 1
 	.y    ds 1
