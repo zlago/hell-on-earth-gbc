@@ -12,7 +12,7 @@ dependencies:
 all of the above must be located in your PATH
 
 to build:
-1. run `make` in the repo root
+1. run `make` (bigger binary, should crash instead of "failing silently") or `make release` in the repo root
 
 file structure:
 

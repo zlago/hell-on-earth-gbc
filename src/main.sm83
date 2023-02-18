@@ -55,7 +55,7 @@ Main::
 	jr .loop
 
 section "player", rom0
-MovePlayer:
+MovePlayer: ; this is a black box im telling you
 	; check if player wants to move
 	ld a, [hPad1]
 	ld b, a
@@ -64,35 +64,62 @@ MovePlayer:
 	and $f0
 	ret z
 	; if so, move
-	ld b, a
-	ld c, 0
-	; vertically
-		ld a, [wxActor.y]
-		ld d, a
-		; down
-		sla b
-		adc c
-		; up
-		sla b
-		sbc c
-		call CollideMap
-		ld [wxActor.y], a
-		xor d
-		and $f0
-		call nz, LoadMap
-	; horizontally
+		ld b, a
+		; vertically
+			ld a, [wxActor.x]
+			ld l, a
+			ld a, [wxActor.y]
+			; down
+			sla b
+			adc 0
+			; up
+			sla b
+			sbc 0
+			ld h, a
+			ld c, a
+			; check if colliding
+			call CollideMap
+			and TILE_SOLID
+			; discard if so
+			jr nz, .skipV
+			ld a, c
+			ld [wxActor.y], a
+			.skipV
+		; horizontally
+			ld a, [wxActor.y]
+			ld h, a
+			ld a, l
+			; left
+			sla b
+			sbc 0
+			; right
+			sla b
+			adc 0
+			; check if colliding
+			ld l, a
+			call CollideMap
+			and TILE_SOLID
+			; discard if so
+			jr nz, .skipH
+			ld a, l
+			ld [wxActor.x], a
+			.skipH
+		ld c, $f0
+	; check if hi(plrX) != hi(CamX)
 		ld a, [wxActor.x]
-		ld d, a
-		; left
-		sla b
-		sbc c
-		; right
-		sla b
-		adc c
-		ld [wxActor.x], a
-		xor d
-		and $f0
-		call nz, LoadMap
+		ld b, a
+		ldh a, [hCamera.x]
+		xor b
+		and c
+		jr nz, .load
+	; check if hi(plrY) != hi(CamY)
+		ld a, [wxActor.y]
+		ld b, a
+		ldh a, [hCamera.y]
+		xor b
+		and c
+	.load ; if either !=, reload the map
+		jp nz, LoadMap ; tail call???
 	ret
 
 section "fetchmaptile", rom0 ; name possibly misleading?
@@ -133,7 +160,6 @@ LoadMap::
 	ld c, 16 ; couldnt come up with a constant for this
 	ld de, _SCRN0
 	.column ; copy a column of rows
-		ld b, b
 		ld b, 16/2 ; or this
 		push hl
 	.row ; copy a row
@@ -169,7 +195,15 @@ hCamera::
 	.x ds 1 ; x position of camera
 
 section "collidemap", rom0
-CollideMap::
+CollideMap:: ; h - Y, l - X, h = %01000000 | (h & %00111111)
+	call FetchMapTile
+.noSwitch:: ; preserves hl
+	ld a, [hl]
+	push hl
+	ld h, high(TileProperties)
+	ld l, a
+	ld a, [hl]
+	pop hl
 	; done
 	ret
 

@@ -1,6 +1,8 @@
 ; basically unused
-DEF PALETTE_DMG EQU $3f
+def PALETTE_DMG equ $3f
 ; game related
-DEF START_X EQU $88
-DEF START_Y EQU $88
-DEF MAX_ACTORS EQU 16
+def START_X equ $88
+def START_Y equ $88
+def MAX_ACTORS equ 16
+; tile collision
+def TILE_SOLID equ %00000001

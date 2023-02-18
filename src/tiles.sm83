@@ -1,0 +1,7 @@
+include "defines.inc"
+
+section "tileprop", rom0, align[8]
+TileProperties::
+ds  8, 0          ; w on w dither
+ds  8, TILE_SOLID ; b on w dither
+ds 16, TILE_SOLID ; wall tiles
