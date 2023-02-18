@@ -10,6 +10,8 @@
 ; /___/  /___//_________//_________//_________/
 ; honestly i just dont know how to name this
 
+; wanna help? ctrl+f for "todo:"
+
 include "hardware.inc"
 include "macros.inc"
 include "defines.inc"
@@ -20,7 +22,7 @@ zCrash:
 	jr @
 
 section "vblank", rom0[$40]
-zVBlank:
+zVBlank: ; todo: proper handler
 	reti
 
 for V, 4
@@ -104,7 +106,7 @@ Main::
 	jr .loop
 
 section "objects", rom0
-Display:
+Display: ; todo: replace this nonsense
 	ld a, bank(wxActor)
 	ldh [rSMBK], a
 	ld a, [wxActor.y]
@@ -130,10 +132,11 @@ MovePlayer: ; this is a black box im telling you
 	ld b, a
 	ldh a, [hPad1.diff]
 	and b
-	and $f0
+	and PADF_UP | PADF_DOWN | PADF_LEFT | PADF_RIGHT
 	ret z
 	; if so, move
 		ld b, a
+		; todo: wrap this into a 
 		; vertically
 			ld a, [wxActor.x]
 			ld l, a
@@ -215,46 +218,46 @@ section "loadmap", rom0
 LoadMap::
 	ld a, bank(wxActor)
 	ldh [rSMBK], a
-	; fetch the screen bank
-	ld a, [wxActor.y]
-	and $f0
-	ldh [hCamera.y], a
-	ld h, a
-	ld a, [wxActor.x]
-	and $f0
-	ldh [hCamera.x], a
-	ld l, a
-	call FetchMapTile
+	; fetch the screen bank & pointer, update camera
+		ld a, [wxActor.y]
+		and $f0
+		ldh [hCamera.y], a
+		ld h, a
+		ld a, [wxActor.x]
+		and $f0
+		ldh [hCamera.x], a
+		ld l, a
+		call FetchMapTile
 	; load c and de
 	ld c, 16 ; couldnt come up with a constant for this
 	ld de, _SCRN0
 	.column ; copy a column of rows
 		ld b, 16/2 ; or this
-		push hl
-	.row ; copy a row
-		.wait ; wait for safe access
-		ldh a, [rSTAT]
-		and STATF_BUSY
-		jr nz, .wait
-		rept 2 ; copy two bytes
-			ld a, [hl+]
-			ld [de], a
-			inc e
-			endr
-		dec b
-		jr nz, .row
-	; adjust for the next row
-		; hl
-		pop hl
-		inc h
-		; de
-		ld a, e
-		add 15
-		ld e, a
-		inc de
-		; then decrement counter
-		dec c
-		jr nz, .column
+		push hl ; faster to add 256 than 16 then 240
+		.row ; copy a row
+			.wait ; wait for safe access
+				ldh a, [rSTAT]
+				and STATF_BUSY
+				jr nz, .wait
+			rept 2 ; copy two bytes
+				ld a, [hl+]
+				ld [de], a
+				inc e
+				endr
+			dec b
+			jr nz, .row
+		; adjust for the next row
+			; hl
+				pop hl
+				inc h
+			; de
+				ld a, e
+				add 15
+				ld e, a
+				inc de
+			; then decrement counter
+				dec c
+				jr nz, .column
 	; done
 	ret
 
@@ -317,7 +320,18 @@ xSplashTilemap:
 for V, 4
 section "map{x:V}", romx
 xMap{x:V}::
-	incbin "map.bin", V*(2**14), 2**14
+	incbin "map.bin", V*16384, 16384
+endr
+
+for V, 4
+section "flavor{x:V}", romx
+xFlavor{x:V}::
+	for V2, 4
+		for V3, 16
+			incbin "flavor.bin", (V*16384)+(V2*4096)+(V3*128)+(000*16), 128
+			incbin "flavor.bin", (V*16384)+(V2*4096)+(V3*128)+(128*16), 128
+		endr
+	endr
 endr
 
 section "maplut", rom0, align[8,low(-4)]
