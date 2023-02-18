@@ -9,5 +9,6 @@ bgb.bat
 concept/
 *.sublime-workspace
 *.sublime-project
+*.ase
 # not sure if this one will ever be used
 hh/

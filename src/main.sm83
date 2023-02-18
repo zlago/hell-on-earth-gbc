@@ -36,8 +36,31 @@ section "header", rom0[$100]
 
 section "title", rom0
 Title::
-	jp Main
+	; load splash screen
+		; load tileset
+			ld a, bank(xSplash2bpp)
+			ld [rROMB], a
+			ld hl, xSplash2bpp
+			ld de, _VRAM+$1000
+			ld bc, xSplash2bpp.end - xSplash2bpp
+			call SafeCpy
+		; load map
+			ld hl, xSplashTilemap
+			ld de, _SCRN0
+			ld bc, xSplashTilemap.end - xSplashTilemap
+			call SafeCpy
 .loop
+	halt
+	; poll
+		call Joy
+	; go to next screen once start is hit
+		ld a, [hPad1]
+		ld b, a
+		ldh a, [hPad1.diff]
+		and b
+		and PADF_START
+	jr z, .loop
+	jp Main
 
 section "main", rom0
 Main::
@@ -263,6 +286,14 @@ xTileset2bpp:
 	.end
 xPlayer2bpp:
 	incbin "player.2bpp"
+	.end
+
+section "splash", romx
+xSplash2bpp:
+	incbin "splash.2bpp"
+	.end
+xSplashTilemap:
+	incbin "splash.tilemap"
 	.end
 
 for V, 4
