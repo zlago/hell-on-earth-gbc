@@ -10,13 +10,11 @@ ConsoleCheck:: ; this will be ran at bootup
 	cp BOOTUP_A_CGB ; check console
 	jr z, Init
 	; not GBC, jump to ROMX, display error and lock up
-	ld a, bank(xWrongConsole)
-	ld [rROMB], a
+	rom_bank xWrongConsole, 0
 	jp xWrongConsole
 Init:: ; this will be ran on software reset
 	; GBC, jump to ROMX to continue init
-	ld a, bank(xInit)
-	ld [rROMB], a
+	rom_bank xInit, 0
 	jp xInit
 
 section "xinit", romx

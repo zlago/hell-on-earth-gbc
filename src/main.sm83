@@ -37,9 +37,8 @@ section "header", rom0[$100]
 section "title", rom0
 Title::
 	; load splash screen
+		rom_bank xSplash2bpp
 		; load tileset
-			ld a, bank(xSplash2bpp)
-			ld [rROMB], a
 			ld hl, xSplash2bpp
 			ld de, _VRAM+$1000
 			ld bc, xSplash2bpp.end - xSplash2bpp
@@ -60,6 +59,11 @@ Title::
 		and b
 		and PADF_START
 	jr z, .loop
+	; clear map
+		xor a
+		ld hl, _SCRN0
+		ld bc, _SCRN1 - _SCRN0
+		call SafeSet
 	jp Main
 
 section "main", rom0
@@ -74,11 +78,10 @@ Main::
 	endc
 	ld [wxActor.x], a
 	; load tileset
-	ld a, bank(xTileset2bpp)
-	ld [rROMB], a
+	rom_bank xTileset2bpp
 	ld hl, xTileset2bpp
-	ld de, _VRAM+$1000
-	ld bc, xTileset2bpp.end - xTileset2bpp
+	ld de, vTileset
+	ld bc, vTileset.end - vTileset
 	call SafeCpy
 	; load player
 	ld hl, xPlayer2bpp
@@ -201,7 +204,7 @@ FetchMapTile:: ; h - Y, l - X, rROMB = bank, hl = tile, clobbers de
 	ld e, a
 	ld d, high(MapLut)
 	ld a, [de]
-	ld [rROMB], a
+	rom_bank 0
 	; adjust h
 	res 7, h
 	set 6, h
@@ -259,6 +262,8 @@ section "hram", hram
 hCamera::
 	.y ds 1 ; y position of camera
 	.x ds 1 ; x position of camera
+hShadowROMB::
+	ds 1 ; shadow of the bank register
 
 section "collidemap", rom0
 CollideMap:: ; h - Y, l - X, h = %01000000 | (h & %00111111)
@@ -282,10 +287,23 @@ wxActor::
 
 section "tileset", romx
 xTileset2bpp:
+	load "vtileset", vram[$9000]
+	vTileset:
 	incbin "tileset.2bpp"
 	.end
+	endl
 xPlayer2bpp:
 	incbin "player.2bpp"
+	.end
+
+section "maptext", vram[$8c00]
+vMapText:
+	ds $10 * 16 * 2
+	.end
+
+section "menutext", vram[$8e00]
+vMenuText:
+	ds $10 * 16 * 2
 	.end
 
 section "splash", romx

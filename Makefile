@@ -26,7 +26,8 @@ HDR_RAM = 2
 HDR_VER = 0
 
 # dependencies
-ASM_REQS = $(patsubst src/%.sm83,obj/%.o,$(shell find src/ -name '*.sm83'))
+ASM_REQS = $(shell find src/inc/ -name '*.inc')
+LINK_REQS = $(patsubst src/%.sm83,obj/%.o,$(shell find src/ -name '*.sm83'))
 GFX_REQS = res/map.bin res/tileset.2bpp res/player.2bpp res/splash.2bpp
 
 .PHONY: all release dev clean
@@ -63,13 +64,13 @@ res/player.2bpp: src/res/player.png res/
 res/splash.2bpp: src/res/splash.png res/
 	rgbgfx -u -c "#000, #00f, #0ff, #fff" -o $@ -t res/splash.tilemap $<
 
-obj/%.o: src/%.sm83 $(GFX_REQS) obj/
+obj/%.o: src/%.sm83 $(ASM_REQS) $(GFX_REQS) obj/ 
 	rgbasm ${ASM_FLAGS} -o $@ $<
 
-bin/${BIN_NAME}.gbc: $(ASM_REQS) bin/ # "release" build
+bin/${BIN_NAME}.gbc: $(LINK_REQS) bin/ # "release" build
 	rgblink ${LINK_FLAGS} -m bin/${BIN_NAME}.map -n bin/${BIN_NAME}.sym -o $@ obj/*.o
 	rgbfix ${FIX_FLAGS} $@
 
-bin/${BIN_NAME}-dev.gbc: $(ASM_REQS) bin/ # "dev" build
+bin/${BIN_NAME}-dev.gbc: $(LINK_REQS) bin/ # "dev" build
 	rgblink ${LINK_FLAGS} -S romx=256,wramx -m bin/${BIN_NAME}-dev.map -n bin/${BIN_NAME}-dev.sym -o $@ obj/*.o
 	rgbfix ${FIX_FLAGS} $@
