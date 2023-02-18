@@ -17,17 +17,6 @@ Init:: ; this will be ran on software reset
 	; GBC, jump to ROMX to continue init
 	ld a, bank(xInit)
 	ld [rROMB], a
-	; load palette
-	ld a, BCPSF_AUTOINC | 0
-	ld hl, Palette
-	lb bc, (Palette.end - Palette) / 4, low(rBCPS)
-	push af
-	push hl
-	call SafePalCpy
-	pop hl
-	pop af
-	lb bc, (Palette.end - Palette) / 4, low(rOCPS)
-	call SafePalCpy
 	jp xInit
 
 section "xinit", romx
@@ -39,10 +28,44 @@ xInit: ; now we can write sloppy code and no
 	ldh [rLCDC], a
 	ld a, $ff
 	ldh [rWY], a
-	; zero-init variables
+	; zero-init things
+		; copy OAM DMA
+			ld hl, DMAcopy
+			ld de, hDMA
+			ld b, hDMA.end - hDMA
+			call ShortCpy
+		; clear shadow OAM
+			xor a
+			ld hl, wSOAM
+			ld b, wSOAM.end - wSOAM
+			call ShortSet
+		; clear OAM
+			ld a, HIGH(wSOAM)
+			call hDMA
+	; init single byte variables
 	xor a
 	ldh [hPad1], a
 	ldh [hPad1.diff], a
+	; enable interrupts
+	ld a, IEF_VBLANK
+	ldh [rIE], a
+	ei
+	; load palette
+	ld a, BCPSF_AUTOINC | 0
+	ld hl, Palette
+	lb bc, (Palette.end - Palette) / 4, low(rBCPS)
+	push af
+	push hl
+	call SafePalCpy
+	pop hl
+	pop af
+	lb bc, (Palette.end - Palette) / 4, low(rOCPS)
+	call SafePalCpy
+	; hack
+	ld a, $19
+	ld [wSOAM+2], a
+	ld a, $07
+	ld [wSOAM+3], a
 	jp Title
 
 Palette:

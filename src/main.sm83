@@ -19,6 +19,16 @@ zCrash:
 	ld b, b
 	jr @
 
+section "vblank", rom0[$40]
+zVBlank:
+	reti
+
+for V, 4
+section "int{x:V}" , rom0[$48+(V*8)]
+zInt{x:V}:
+	rst zCrash
+endr
+
 section "header", rom0[$100]
 	di
 	jp ConsoleCheck
@@ -50,9 +60,37 @@ Main::
 	; load the map
 	call LoadMap
 .loop
-	call Joy
-	call MovePlayer
+	halt
+	; DMA shadowOAM
+		ld a, high(wSOAM)
+		call hDMA
+	; poll input
+		call Joy
+	; move player
+		call MovePlayer
+	; fill shadowOAM
+		call Display
 	jr .loop
+
+section "objects", rom0
+Display:
+	ld a, bank(wxActor)
+	ldh [rSMBK], a
+	ld a, [wxActor.y]
+	res 4, a
+	add 2 ; offset
+	add a
+	add a
+	add a
+	ld [wSOAM+0], a
+	ld a, [wxActor.x]
+	res 4, a
+	inc a ; offset
+	add a
+	add a
+	add a
+	ld [wSOAM+1], a
+	ret
 
 section "player", rom0
 MovePlayer: ; this is a black box im telling you
