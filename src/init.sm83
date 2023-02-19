@@ -10,16 +10,17 @@ ConsoleCheck:: ; this will be ran at bootup
 	cp BOOTUP_A_CGB ; check console
 	jr z, Init
 	; not GBC, jump to ROMX, display error and lock up
-	rom_bank xWrongConsole, 0
+	rom_bank xWrongConsole, 0 ; bank gets saved in romx
 	jp xWrongConsole
 Init:: ; this will be ran on software reset
 	; GBC, jump to ROMX to continue init
-	rom_bank xInit, 0
+	rom_bank xInit, 0 ; bank gets saved in romx
 	jp xInit
 
 section "xinit", romx
 xInit: ; now we can write sloppy code and no
 	; one can complain about the ROM we waste!
+	ldh [hShadowROMB], a ; done in romx to save 2 bytes
 	ld sp, wStack.origin ; init sp to a saner place
 	; init LCDC
 	ld a, LCDCF_ON|LCDCF_BGON|LCDCF_WINON|LCDCF_OBJON|LCDCF_BLK21|LCDCF_BG0|LCDCF_WIN1|LCDCF_OBJ8
@@ -41,9 +42,10 @@ xInit: ; now we can write sloppy code and no
 			ld a, HIGH(wSOAM)
 			call hDMA
 	; init single byte variables
-	xor a
+	; a is 0 from hDMA
 	ldh [hPad1], a
 	ldh [hPad1.diff], a
+	ldh [hVBlank], a
 	; enable interrupts
 	ld a, IEF_VBLANK
 	ldh [rIE], a
@@ -73,6 +75,7 @@ Palette:
 
 section "xwrongconsole", romx
 xWrongConsole: ; puts a tiny "GBC-only" text in the center of the screen
+	ldh [hShadowROMB], a ; done in romx to save 2 bytes
 	; load "GBC-only" tiles into VRAM
 	ld hl, .gfx
 	ld de, _VRAM+$1000+$10
@@ -93,6 +96,7 @@ xWrongConsole: ; puts a tiny "GBC-only" text in the center of the screen
 	xor a
 	ldh [rSCX], a
 	ldh [rSCY], a
+	ldh [hVBlank], a
 	; then endless loop via uninterruptable halt, #BatteryLivesMatter!!
 	ldh [rIE], a
 	ei

@@ -16,19 +16,43 @@ include "hardware.inc"
 include "macros.inc"
 include "defines.inc"
 
-section "crash", rom0[$38]
-zCrash:
+section "icrash", rom0[$38]
+iCrash:
 	ld b, b
 	jr @
 
-section "vblank", rom0[$40]
-zVBlank: ; todo: proper handler
-	reti
+section "ivblank", rom0[$40]
+iVBlank: ; push and jump to the real handler
+	push af
+	push bc
+	push de
+	push hl
+	jp VBlank
+
+section "vblank", rom0
+VBlank: ; actual handler todo: handle text
+	; check pending tasks
+		ldh a, [hVBlank]
+		and a
+		jr z, .done
+	.done ; pop and return
+		rom_bank
+		pop hl
+		pop de
+		pop bc
+		pop af
+		reti
+
+section "wvblank", wram0
+wVBlankText:
+	.addr    ds 1 ; high(text)
+	.bank    ds 1 ; bank(text)
+	.counter ds 1 ; counts displayed tiles
 
 for V, 4
 section "int{x:V}" , rom0[$48+(V*8)]
-zInt{x:V}:
-	rst zCrash
+iInt{x:V}:
+	rst iCrash
 endr
 
 section "header", rom0[$100]
@@ -228,36 +252,70 @@ LoadMap::
 		ldh [hCamera.x], a
 		ld l, a
 		call FetchMapTile
-	; load c and de
-	ld c, 16 ; couldnt come up with a constant for this
-	ld de, _SCRN0
-	.column ; copy a column of rows
-		ld b, 16/2 ; or this
-		push hl ; faster to add 256 than 16 then 240
-		.row ; copy a row
-			.wait ; wait for safe access
-				ldh a, [rSTAT]
-				and STATF_BUSY
-				jr nz, .wait
-			rept 2 ; copy two bytes
-				ld a, [hl+]
-				ld [de], a
-				inc e
-				endr
-			dec b
-			jr nz, .row
-		; adjust for the next row
-			; hl
-				pop hl
-				inc h
-			; de
-				ld a, e
-				add 15
-				ld e, a
-				inc de
-			; then decrement counter
-				dec c
-				jr nz, .column
+	; load the room into VRAM
+		; load c and de
+		ld c, 16 ; couldnt come up with a constant for this
+		ld de, _SCRN0
+		.column ; copy a column of rows
+			ld b, 16/2 ; or this
+			push hl ; faster to add 256 than 16 then 240
+			.row ; copy a row
+				.wait ; wait for safe access
+					ldh a, [rSTAT]
+					and STATF_BUSY
+					jr nz, .wait
+				rept 2 ; copy two bytes
+					ld a, [hl+]
+					ld [de], a
+					inc e
+					endr
+				dec b
+				jr nz, .row
+			; adjust for the next row
+				; hl
+					pop hl
+					inc h
+				; de
+					ld a, e
+					add 15
+					ld e, a
+					inc de
+				; then decrement counter
+					dec c
+					jr nz, .column
+	; set the text renderer to display the rooms flavor text
+		; fetch position
+			ldh a, [hCamera.x]
+			ld b, a
+			ldh a, [hCamera.y]
+			swap b
+			or a, b
+		; get bank and address
+			; i wanted to wrap this in a macro but it wouldnt work
+			; bank
+			ld h, a
+			rlca
+			rlca
+			and %00000011
+				assert low(FlavorLut) == %00000000
+			ld e, a
+			ld d, high(FlavorLut)
+			ld a, [de]
+			; addr
+			res 7, h
+			set 6, h
+				assert high(xFlavor1)  == (%0<<7) | (%1<<6)
+		; set handler
+			di
+			ld [wVBlankText.bank], a
+			ld a, h
+			ld [wVBlankText.addr], a
+			xor a
+			ld [wVBlankText.counter], a
+			ldh a, [hVBlank]
+			or VBLANK_TEXT
+			ldh [hVBlank], a
+			ei ; (shut up shut up shut up shut)
 	; done
 	ret
 
@@ -265,8 +323,8 @@ section "hram", hram
 hCamera::
 	.y ds 1 ; y position of camera
 	.x ds 1 ; x position of camera
-hShadowROMB::
-	ds 1 ; shadow of the bank register
+hShadowROMB:: ds 1 ; shadow of the bank register
+hVBlank:: ds 1 ; ; "task list" for VBlank handler
 
 section "collidemap", rom0
 CollideMap:: ; h - Y, l - X, h = %01000000 | (h & %00111111)
@@ -329,7 +387,9 @@ xFlavor{x:V}::
 	for V2, 4
 		for V3, 16
 			incbin "flavor.bin", (V*16384)+(V2*4096)+(V3*128)+(000*16), 128
+			;print (V*128)+(V2*32)+(V3*1)+(0*16), " "
 			incbin "flavor.bin", (V*16384)+(V2*4096)+(V3*128)+(128*16), 128
+			;print (V*128)+(V2*32)+(V3*1)+(1*16), " "
 		endr
 	endr
 endr
@@ -338,4 +398,10 @@ section "maplut", rom0, align[8,low(-4)]
 MapLut::
 for V, 4
 	db bank(xMap{x:V})
+endr
+
+section "flavorlut", rom0, align[8]
+FlavorLut::
+for V, 4
+	db bank(xFlavor{x:V})
 endr
