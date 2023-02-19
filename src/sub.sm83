@@ -137,12 +137,18 @@ Safe1bppCpy:: ; hl - src, de - dest, bc - length, align 1!!
 	ldh a, [rSTAT]
 	and STATF_BUSY
 	jr nz, .loop
-	; once its safe copy a byte twice
-	ld a, [hl+]
-	ld [de], a
-	inc e
-	ld [de], a
-	inc de
+	; once its safe copy two bytes
+	for V, 2
+		ld a, [hl+]
+		ld [de], a
+		inc e
+		ld [de], a
+		if V == 1
+			inc de
+		else
+			inc e
+		endc
+	endr
 	; check if all bytes got copied
 	dec c
 	jr nz, .loop ; repeat
