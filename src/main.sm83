@@ -35,6 +35,35 @@ VBlank: ; actual handler todo: handle text
 		ldh a, [hVBlank]
 		and a
 		jr z, .done
+	; display text
+		; check for the text task
+			and VBLANK_TEXT
+			jr z, .skipText
+		; if so, prep to copy
+			; first stupid tilemap tho
+			ld a, low(vMapText>>4)
+			ld b, 16
+			ld hl, $9a00
+			.loop
+			ld [hl+], a
+			inc a
+			dec b
+			jr nz, .loop
+			; now copy
+			ld a, [wVBlankText.bank]
+			rom_bank 0
+			ld a, [wVBlankText.addr]
+			ld h, a
+			xor a
+			ld l, a
+			ld bc, 256
+			ld de, vMapText
+			call Safe1bppCpy
+		; remove task
+			ldh a, [hVBlank]
+			and ~VBLANK_TEXT
+			ldh [hVBlank], a
+	.skipText
 	.done ; pop and return
 		rom_bank
 		pop hl

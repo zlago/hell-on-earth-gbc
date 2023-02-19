@@ -125,6 +125,31 @@ SafeCpy:: ; hl - src, de - dest, bc - length, align 1!!
 	jr nz, .loop
 	ret
 
+section "safe1bppcpy", rom0
+Safe1bppCpy:: ; hl - src, de - dest, bc - length, align 1!!
+	; adjust for unroll (2), then adjust bc
+	srl b
+		rr c
+	dec bc
+	inc b
+	inc c
+.loop ; wait for safe VRAM access
+	ldh a, [rSTAT]
+	and STATF_BUSY
+	jr nz, .loop
+	; once its safe copy a byte twice
+	ld a, [hl+]
+	ld [de], a
+	inc e
+	ld [de], a
+	inc de
+	; check if all bytes got copied
+	dec c
+	jr nz, .loop ; repeat
+	dec b
+	jr nz, .loop
+	ret
+
 section "safeset", rom0
 SafeSet:: ; a - data, hl - dest, bc - length, clobbers e, align 2!!
 	; adjust for unroll (4), then adjust bc

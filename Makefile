@@ -52,11 +52,11 @@ obj/:
 res/:
 	mkdir res/
 
-res/flavor.bin: src/res/flavor.png res/
-	superfamiconv tiles -v --mode gb --no-remap -T 8192 -B 1 -F -D -d $@ -i $<
+res/flavor.bin: src/res/flavor.png src/res/1bit.dpal res/
+	superfamiconv tiles -v --mode gb -T 8192 -B 1 -F -D -p src/res/1bit.dpal -d $@ -i $<
 
-res/map.bin: src/res/map.png res/tileset.2bpp src/res/base.dpal res/
-	superfamiconv map -v --mode gb --split-width 256 --split-height 256 -F -t res/tileset.2bpp -p src/res/base.dpal -i $< -d $@
+res/map.bin: src/res/map.png res/tileset.2bpp src/res/rev.dpal res/
+	superfamiconv map -v --mode gb --split-width 256 --split-height 256 -F -t res/tileset.2bpp -p src/res/rev.dpal -i $< -d $@
 
 res/tileset.2bpp: src/res/tileset.png res/
 	rgbgfx -c "#000, #00f, #0ff, #fff" -o $@ $<
