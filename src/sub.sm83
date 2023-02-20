@@ -238,7 +238,7 @@ if def(PLAYERS) == 0
 endc
 
 section "joy", rom0 ; wow this is such a mess
-Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers (b)c, hl
+Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers (b)c, hl, de
 	ld hl, hPad1
 	ld c, low(rP1)
 .loop
@@ -258,6 +258,8 @@ Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers (b)c, hl
 	ld [hl+], a ; buttons held
 	xor a, e
 	ld [hl+], a ; buttons changed
+	and e
+	ld [hl+], a ; buttons newly pressed
 	ld a, P1F_GET_DPAD
 	ldh [c], a ; select Dpad
 	if PLAYERS > 1
@@ -270,6 +272,7 @@ section "joypads", hram
 for V, 1, PLAYERS+1
 	hPad{x:V}:: ds 1
 	.diff:: ds 1
+	.press:: ds 1
 endr
 
 ; someone please if youre reading this remind me to

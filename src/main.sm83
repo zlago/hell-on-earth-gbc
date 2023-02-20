@@ -112,7 +112,8 @@ section "header", rom0[$100]
 	db $ce,$ed,$66,$66,$cc,$0d,$00,$0b,$03,$73,$00,$83
 	db $00,$0c,$00,$0d,$00,$08,$11,$1f,$88,$89,$00,$0e
 	; logo (bottom, not checked by gbc)
-	ds 24, $5a
+	; commented out cause i decided i want 24B more rom0 ; ds 24, $5a
+section "header2", rom0[$100+24+24+4]
 	; rest of header (handled by rgbfix)
 	ds $150-@, $00
 
@@ -135,10 +136,7 @@ TitleLoop::
 	; poll
 		call Joy
 	; go to next screen once start is hit
-		ld a, [hPad1]
-		ld b, a
-		ldh a, [hPad1.diff]
-		and b
+		ld a, [hPad1.press]
 		and PADF_START
 	jr z, TitleLoop
 	; clear map
@@ -174,6 +172,12 @@ Main::
 		ld e, low(vMapText>>4)
 		ld hl, $9a00
 		lb bc, 16, 16
+	; todo: load statusbar
+	; set window
+		ld a, WX_OFS+128
+		ldh [rWX], a
+		xor a
+		ldh [rWY], a
 	.copyLoop
 		ldh a, [rSTAT]
 		and STATF_BUSY
@@ -201,7 +205,40 @@ MainLoop::
 		call MovePlayer
 	; fill shadowOAM
 		call Display
+	; pause (if start is pressed)
+		ld a, [hPad1.press]
+		and PADF_START
+		call nz, Pause
 	jr MainLoop
+
+Pause::
+	; todo: load the window
+	; slide the window in
+	ld a, WX_OFS+128
+	.win
+	halt
+	sub 8
+	ldh [rWX], a
+	cp a, WX_OFS
+	jr nz, .win
+PauseLoop::
+	halt
+	; poll input
+		call Joy
+	; unpause (if start is pressed)
+		ld a, [hPad1.press]
+		and PADF_START
+	jr z, PauseLoop
+	; slide the window out
+	ld a, WX_OFS
+	.win
+	halt
+	add 8
+	ldh [rWX], a
+	cp a, WX_OFS+128
+	jr nz, .win
+	; done
+	ret
 
 section "objects", rom0
 Display: ; todo: replace this nonsense
@@ -226,10 +263,7 @@ Display: ; todo: replace this nonsense
 section "player", rom0
 MovePlayer: ; this is a black box im telling you
 	; check if player wants to move
-	ld a, [hPad1]
-	ld b, a
-	ldh a, [hPad1.diff]
-	and b
+	ld a, [hPad1.press]
 	and PADF_UP | PADF_DOWN | PADF_LEFT | PADF_RIGHT
 	ret z
 	; if so, move
@@ -461,10 +495,10 @@ for V, 4
 section "flavor{x:V}", romx
 xFlavor{x:V}::
 	for V2, 4
-		for V3, 16
+		for V3, 16 ; cursed code to interleave 1bpp tiles
 			incbin "flavor.bin", (V*16384)+(V2*4096)+(V3*128)+(000*16), 128
-			;print (V*128)+(V2*32)+(V3*1)+(0*16), " "
 			incbin "flavor.bin", (V*16384)+(V2*4096)+(V3*128)+(128*16), 128
+			;print (V*128)+(V2*32)+(V3*1)+(0*16), " " ; was used to debug if i properly did this thing
 			;print (V*128)+(V2*32)+(V3*1)+(1*16), " "
 		endr
 	endr
