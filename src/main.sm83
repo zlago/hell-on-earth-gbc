@@ -420,6 +420,32 @@ LoadMap::
 			or VBLANK_TEXT
 			ldh [hVBlank], a
 			ei ; (shut up shut up shut up shut)
+	; mark room as explored in the save
+		; a needs to be top 5 bits, b bottom 3
+			ldh a, [hCamera.x]
+			ld b, a
+			ldh a, [hCamera.y]
+			swap a; 4321....    -> ....4321
+			rlc b ; 0xxx...., . -> xxx....0, 0
+			srl b ; xxx....0, . -> .xxx...., 0
+			adc a ; ....4321, 0 -> ...43210, .
+			swap b ; .xxx.... -> .....xxx
+		; set hl to wSave.map + a
+			add low(wSave.map)
+				assert high(wSave.map) == high(wSave.mapEnd)
+			ld h, high(wSave.map)
+			ld l, a
+		; set a's bth bit
+			inc b
+			xor a
+			scf
+			.bitshift
+			rla
+			dec b
+			jr nz, .bitshift
+		; mark room as explored in the save
+			or a, [hl]
+			ld [hl], a
 	; done
 	ret
 

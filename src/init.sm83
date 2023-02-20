@@ -175,25 +175,25 @@ LoadSave:: ; load a save file, or create one if it doesnt exist
 	ret
 
 if def(VERIFY) == 0
-	def VERIFY equs "femboys~"
+	def VERIFY equs "femboy love"
 	endc
 section "verify", rom0
 Verify::
-	db "{-8s:VERIFY}"
+	db "{-16s:VERIFY}"
 	.end
-	assert @ - Verify <= 8
+	assert @ - Verify <= 16
 
 section "saveshadow", wram0, align[8]
 wSave::
-	.verify ds 8
+	.verify ds 16
 	.verifyEnd
+	.map:: ds 16*16/8
+		.mapEnd::
+	.flags:: ds 256/8
+		.flagsEnd::
 	.y ds 1
 	.x ds 1
 	.hp ds 1
-	.map ds 16*16/8
-		.mapEnd
-	.flags ds 256/8
-		.flagsEnd
 	.checksum ds 4 ; checksum must be last
 	.end
 	assert high(wSave) == high(.end)
