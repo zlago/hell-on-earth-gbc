@@ -17,7 +17,7 @@ include "macros.inc"
 include "defines.inc"
 
 section "icrash", rom0[$38]
-iCrash:
+iCrash::
 	ld b, b
 	jr @
 
@@ -148,15 +148,7 @@ TitleLoop::
 
 section "main", rom0
 Main::
-	; set player position
-		ld a, bank(wxActor)
-		ldh [rSMBK], a
-		ld a, START_Y
-		ld [wxActor.y], a
-		if START_X != START_Y
-			ld a, START_X
-		endc
-		ld [wxActor.x], a
+	call LoadSave
 	; load tileset
 		rom_bank xTileset2bpp
 		ld hl, xTileset2bpp
@@ -214,13 +206,15 @@ MainLoop::
 Pause::
 	; todo: load the window
 	; slide the window in
-	ld a, WX_OFS+128
-	.win
-	halt
-	sub 8
-	ldh [rWX], a
-	cp a, WX_OFS
-	jr nz, .win
+		ld a, WX_OFS+128
+		.win
+		halt
+		sub 8
+		ldh [rWX], a
+		cp a, WX_OFS
+		jr nz, .win
+	; save
+		call SaveSave
 PauseLoop::
 	halt
 	; poll input
@@ -451,10 +445,10 @@ CollideMap:: ; h - Y, l - X, h = %01000000 | (h & %00111111)
 
 section "actors", wramx, align[8]
 wxActor::
-	.type ds 1
-	.y    ds 1
-	.x    ds 1
-.next ds 256*(MAX_ACTORS-1)
+	.type:: ds 1
+	.y::    ds 1
+	.x::    ds 1
+.next:: ds 256*(MAX_ACTORS-1)
 
 section "tileset", romx
 xTileset2bpp:

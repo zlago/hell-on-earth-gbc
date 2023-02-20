@@ -73,6 +73,137 @@ Palette:
 
 /* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
 
+section "newsave", rom0
+NewSave::
+	; verify
+		ld hl, Verify
+		ld de, wSave.verify
+		ld b, Verify.end - Verify
+		call ShortCpy
+	; init player position
+		ld a, bank(wxActor)
+		ldh [rSMBK], a
+		ld a, START_Y
+		ld [wxActor.y], a
+		if START_X != START_Y
+			ld a, START_X
+		endc
+		ld [wxActor.x], a
+	; clear map
+		xor a
+		ld hl, wSave.map
+		ld b, wSave.mapEnd - wSave.map
+		call ShortSet
+	; clear flags
+		ld hl, wSave.flags
+		ld b, wSave.flagsEnd - wSave.flags
+		call ShortSet
+	; save
+		jp SaveSave
+
+section "savesave", rom0
+SaveSave::
+	; copy player position
+		ld a, bank(wxActor)
+		ldh [rSMBK], a
+		ld a, [wxActor.y]
+		ld [wSave.y], a
+		ld a, [wxActor.x]
+		ld [wSave.x], a
+	; checksum
+		ld de, wSave
+		ld bc, wSave.checksum - wSave
+		call Crc32
+		dec de ; Crc32 returns with de = wSave.checksum + 1
+		ld b, 4
+		call ShortCpy
+	; copy to sram
+		ld hl, wSave
+		ld de, sSave
+		ld b, wSave.end - wSave
+		ld a, CART_SRAM_ENABLE
+		ld [rRAMG], a
+		call ShortCpy
+		xor a
+		;ld [rRAMG], a
+	ret
+
+section "loadsave", rom0
+LoadSave:: ; load a save file, or create one if it doesnt exist
+	; copy to wram
+		ld hl, sSave
+		ld de, wSave
+		ld b, wSave.end - wSave
+		ld a, CART_SRAM_ENABLE
+		ld [rRAMG], a
+		call ShortCpy
+		xor a
+		;ld [rRAMG], a
+	; verify
+		ld hl, Verify
+		ld de, wSave.verify
+		ld b, Verify.end - Verify
+		.verifyLoop
+			ld a, [de]
+			inc de
+			cp [hl]
+			inc hl
+			jp nz, NewSave
+			dec b
+			jr nz, .verifyLoop
+	; check checksum
+		ld de, wSave
+		ld bc, wSave.checksum - wSave
+		call Crc32
+		dec de ; Crc32 returns with de = wSave.checksum + 1
+		ld b, 4
+		.crcLoop
+			ld a, [de]
+			inc de
+			cp [hl]
+			inc hl
+			call nz, iCrash
+			dec b
+			jr nz, .crcLoop
+	; set player stuff
+		ld a, bank(wxActor)
+		ldh [rSMBK], a
+		ld a, [wSave.y]
+		ld [wxActor.y], a
+		ld a, [wSave.x]
+		ld [wxActor.x], a
+	ret
+
+if def(VERIFY) == 0
+	def VERIFY equs "femboys~"
+	endc
+section "verify", rom0
+Verify::
+	db "{-8s:VERIFY}"
+	.end
+	assert @ - Verify <= 8
+
+section "saveshadow", wram0, align[8]
+wSave::
+	.verify ds 8
+	.verifyEnd
+	.y ds 1
+	.x ds 1
+	.hp ds 1
+	.map ds 16*16/8
+		.mapEnd
+	.flags ds 256/8
+		.flagsEnd
+	.checksum ds 4 ; checksum must be last
+	.end
+	assert high(wSave) == high(.end)
+
+section "save", sram[$a000]
+sSave::
+	ds wSave.end - wSave
+
+/* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
+
 section "xwrongconsole", romx
 xWrongConsole: ; puts a tiny "GBC-only" text in the center of the screen
 	ldh [hShadowROMB], a ; done in romx to save 2 bytes
