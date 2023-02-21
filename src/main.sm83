@@ -29,76 +29,6 @@ iVBlank: ; push and jump to the real handler
 	push hl
 	jp VBlank
 
-section "vblank", rom0
-VBlank: ; actual handler todo: handle text
-	; check pending tasks
-		ldh a, [hVBlank]
-		and a
-		jr z, .done
-	; display text
-		; check for the text task
-			and VBLANK_TEXT
-			jr z, .skipText
-		; check if the buffer needs to be cleaned
-			ld a, [wVBlankText.counter]
-			and a
-			jr nz, .noClear
-		; if so, clean it
-			ld a, [wVBlankText.dst]
-			ld h, a
-			xor a
-			ld l, a
-			ld b, (vMapText.end - vMapText) / 2 / 4
-		.clear
-			ldh a, [rSTAT]
-			and STATF_BUSY
-			jr nz, .clear
-			xor a
-			rept 4
-				inc l
-				ld [hl+], a
-				endr
-			dec b
-			jr nz, .clear
-		.noClear
-			; now copy
-			ld a, [wVBlankText.bank]
-			rom_bank 0 ; bank
-			ld a, [wVBlankText.src]
-			ld h, a ; source hi
-			ld a, [wVBlankText.counter]
-			ld l, a ; source lo
-			add a
-			ld e, a ; dest lo
-			ld a, [wVBlankText.dst] ; dest hi
-			adc 0
-			ld d, a
-			ld bc, 8
-			call Safe1bppCpy
-		; remove task
-			ld a, [wVBlankText.counter]
-			add 8
-			ld [wVBlankText.counter], a
-			jr nc, .skipText
-			ldh a, [hVBlank]
-			and ~VBLANK_TEXT
-			ldh [hVBlank], a
-	.skipText
-	.done ; pop and return
-		rom_bank
-		pop hl
-		pop de
-		pop bc
-		pop af
-		reti
-
-section "wvblank", wram0
-wVBlankText:
-	.src     ds 1 ; high(text src)
-	.dst     ds 1 ; high(dest tiles)
-	.bank    ds 1 ; bank(text src)
-	.counter ds 1 ; counts displayed tiles
-
 for V, 4
 section "int{x:V}" , rom0[$48+(V*8)]
 iInt{x:V}:
@@ -204,7 +134,8 @@ MainLoop::
 	jr MainLoop
 
 Pause::
-	; todo: load the window
+	; todo: HUD
+	; todo: map
 	; slide the window in
 		ld a, WX_OFS+128
 		.win
