@@ -68,7 +68,19 @@ TitleLoop::
 	; clear save if select is pressed
 		ld a, [hPad1.press]
 		and PADF_SELECT
-		call nz, NewSave
+		jr z, .noClear
+		call NewSave
+		ld a, $36 | AUD1SWEEP_DOWN
+		ldh [rAUD1SWEEP], a
+		ld a, AUDLEN_DUTY_50
+		ldh [rAUD1LEN], a
+		ld a, $c2
+		ldh [rAUD1ENV], a
+		ld a, low($769)
+		ldh [rAUD1LOW], a
+		ld a, high($769) | AUDHIGH_RESTART
+		ldh [rAUD1HIGH], a
+		.noClear
 	; go to next screen once start is hit
 		ld a, [hPad1.press]
 		and PADF_START
@@ -169,9 +181,9 @@ macro load_menu_map
 		ld a, [de]
 		srl b
 		jr c, .noBlank
-		xor a ; replace with blank tile if map tile is unexplored
+		ld a, $01 ; replace with blank tile if map tile is unexplored
 		.noBlank
-		ld [hl+], a ; 9/16 cycles
+		ld [hl+], a ; 9-10/16 cycles
 		inc de
 		dec c
 		jr nz, .loopBits
@@ -191,6 +203,10 @@ macro load_menu_map
 		jr nz, .loopBytes
 	endm
 
+if def(PAUSE_SLIDE_SPEED) == 0
+	def PAUSE_SLIDE_SPEED equ 8
+	endc
+	assert 128 % PAUSE_SLIDE_SPEED == 0
 Pause::
 	; todo: HUD
 	; load the menu map
@@ -199,7 +215,7 @@ Pause::
 		ld a, WX_OFS+128
 		.win
 		halt
-		sub 8
+		sub PAUSE_SLIDE_SPEED
 		ldh [rWX], a
 		cp a, WX_OFS
 		jr nz, .win
@@ -217,7 +233,7 @@ PauseLoop::
 	ld a, WX_OFS
 	.win
 	halt
-	add 8
+	add PAUSE_SLIDE_SPEED
 	ldh [rWX], a
 	cp a, WX_OFS+128
 	jr nz, .win
