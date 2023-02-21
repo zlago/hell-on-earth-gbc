@@ -65,6 +65,10 @@ TitleLoop::
 	halt
 	; poll
 		call Joy
+	; clear save if select is pressed
+		ld a, [hPad1.press]
+		and PADF_SELECT
+		call nz, NewSave
 	; go to next screen once start is hit
 		ld a, [hPad1.press]
 		and PADF_START

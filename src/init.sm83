@@ -89,8 +89,10 @@ NewSave::
 			ld a, START_X
 		endc
 		ld [wxActor.x], a
-	; clear map
 		xor a
+		ld [wSave.hp], a
+		ld [wSave.crc], a ; i get uninit memory reads from this fucker
+	; clear map
 		ld hl, wSave.map
 		ld b, wSave.mapEnd - wSave.map
 		call ShortSet

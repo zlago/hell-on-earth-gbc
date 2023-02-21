@@ -256,9 +256,10 @@ Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers (b)c, hl, de
 	or a, d ; merge states
 	cpl ; invert
 	ld [hl+], a ; buttons held
+	ld d, a
 	xor a, e
 	ld [hl+], a ; buttons changed
-	and e
+	and d
 	ld [hl+], a ; buttons newly pressed
 	ld a, P1F_GET_DPAD
 	ldh [c], a ; select Dpad
