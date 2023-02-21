@@ -90,16 +90,22 @@ Main::
 		ld de, _VRAM
 		ld bc, xPlayer2bpp.end - xPlayer2bpp
 		call SafeCpy
-	; load vMapText tilemap
-		ld e, low(vMapText>>4)
-		ld hl, $9a00
-		lb bc, 16, 16
+	; load menumap tiles
+		rom_bank xMenuMap2bpp
+		ld hl, xMenuMap2bpp
+		ld de, vMenuText
+		ld bc, xMenuMap2bpp.end - xMenuMap2bpp
+		call Safe1bppCpy
 	; todo: load statusbar
 	; set window
 		ld a, WX_OFS+128
 		ldh [rWX], a
 		xor a
 		ldh [rWY], a
+	; load vMapText tilemap
+		ld e, low(vMapText>>4)
+		ld hl, $9a00
+		lb bc, 16, 16
 	.copyLoop
 		ldh a, [rSTAT]
 		and STATF_BUSY
@@ -133,9 +139,58 @@ MainLoop::
 		call nz, Pause
 	jr MainLoop
 
+macro load_menu_map
+	; first some init
+		; hl - dst, de - src, c (stack) - len/8 or map bitfield byte, c - len%8, b - bits
+		rom_bank xMenuMapTilemap
+		ld de, xMenuMapTilemap
+		ld hl, _SCRN1+4
+		ld c, (xMenuMapTilemap.end - xMenuMapTilemap) / 8
+	.loopBytes ; put bits in b and length%8 in c
+		push bc
+		ld a, low(wSave.mapEnd)
+		sub c
+			assert high(wSave.map) == high(wSave.mapEnd)
+		push de
+		ld d, high(wSave.mapEnd)
+		ld e, a
+		ld a, [de]
+		pop de
+		ld b, a
+		ld c, 8
+	.loopBits ; copy 8 map tiles, with "undiscovered" blanked
+		ldh a, [rSTAT]
+		and STATF_BUSY
+		jr nz, .loopBits
+		ld a, [de]
+		srl b
+		jr c, .noBlank
+		xor a ; replace with blank tile if map tile is unexplored
+		.noBlank
+		ld [hl+], a ; 9/16 cycles
+		inc de
+		dec c
+		jr nz, .loopBits
+	; check if hl needs inc*16
+		pop bc
+		bit 0, c
+		jr z, .skipInc
+		ld a, 16
+		; add hl, a
+		add l
+		ld l, a
+		adc h
+		sub l
+		ld h, a
+		.skipInc
+		dec c
+		jr nz, .loopBytes
+	endm
+
 Pause::
 	; todo: HUD
-	; todo: map
+	; load the menu map
+		load_menu_map
 	; slide the window in
 		ld a, WX_OFS+128
 		.win
@@ -350,7 +405,7 @@ LoadMap::
 			ldh a, [hVBlank]
 			or VBLANK_TEXT
 			ldh [hVBlank], a
-			ei ; (shut up shut up shut up shut)
+			ei
 	; mark room as explored in the save
 		; a needs to be top 5 bits, b bottom 3
 			ldh a, [hCamera.x]
@@ -419,13 +474,21 @@ xPlayer2bpp:
 	.end
 
 section "maptext", vram[$8c00]
-vMapText:
+vMapText::
 	ds $10 * 16 * 2
-	.end
+	.end::
 
 section "menutext", vram[$8e00]
 vMenuText:
 	ds $10 * 16 * 2
+	.end
+
+section "menumap", romx
+xMenuMap2bpp:
+	incbin "menumap.1bpp"
+	.end
+xMenuMapTilemap:
+	incbin "menumap.tilemap"
 	.end
 
 section "splash", romx

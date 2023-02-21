@@ -112,9 +112,9 @@ SaveSave::
 		ld [wSave.x], a
 	; checksum
 		ld de, wSave
-		ld bc, wSave.checksum - wSave
+		ld bc, wSave.crc - wSave
 		call Crc32
-		dec de ; Crc32 returns with de = wSave.checksum + 1
+		dec de ; Crc32 returns with de = wSave.crc + 1
 		ld b, 4
 		call ShortCpy
 	; copy to sram
@@ -153,9 +153,9 @@ LoadSave:: ; load a save file, or create one if it doesnt exist
 			jr nz, .verifyLoop
 	; check checksum
 		ld de, wSave
-		ld bc, wSave.checksum - wSave
+		ld bc, wSave.crc - wSave
 		call Crc32
-		dec de ; Crc32 returns with de = wSave.checksum + 1
+		dec de ; Crc32 returns with de = wSave.crc + 1
 		ld b, 4
 		.crcLoop
 			ld a, [de]
@@ -194,7 +194,7 @@ wSave::
 	.y ds 1
 	.x ds 1
 	.hp ds 1
-	.checksum ds 4 ; checksum must be last
+	.crc ds 4 ; checksum must be last
 	.end
 	assert high(wSave) == high(.end)
 
