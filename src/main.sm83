@@ -431,11 +431,13 @@ LoadMap::
 			ldh a, [hCamera.x]
 			ld b, a
 			ldh a, [hCamera.y]
-			swap a; 4321....    -> ....4321
+			; swap clears carry, 4-0 are top 5 bits, xxx are bottom 3, . bits are reset
+			;   bit 76543210, cy
+			swap a; 4321...., ? -> ....4321, .
 			rlc b ; 0xxx...., . -> xxx....0, 0
 			srl b ; xxx....0, . -> .xxx...., 0
 			adc a ; ....4321, 0 -> ...43210, .
-			swap b ; .xxx.... -> .....xxx
+			swap b; .xxx...., . -> .....xxx, .
 		; set hl to wSave.map + a
 			add low(wSave.map)
 				assert high(wSave.map) == high(wSave.mapEnd)
@@ -452,6 +454,40 @@ LoadMap::
 		; mark room as explored in the save
 			or a, [hl]
 			ld [hl], a
+	; load the rooms palette
+			; fetch the palette
+			ldh a, [hCamera.y]
+			ld b, a
+			ldh a, [hCamera.x]
+			swap a
+			or b
+			ld h, high(xMapColors)
+			ld l, a
+				assert low(xMapColors) == 0
+			rom_bank xMapColors
+			ld a, [hl]
+			; 
+			add a
+			add a
+			add a
+		; load a pointer, offset by the color
+			ld hl, xPalette
+			add l
+			ld l, a
+			adc h
+			sub l
+			ld h, a
+		; load palette
+			rom_bank xPalette
+			ld a, BCPSF_AUTOINC | 0
+			lb bc, 8 / 4, low(rBCPS)
+			push af
+			push hl
+			call SafePalCpy
+			pop hl
+			pop af
+			lb bc, 8 / 4, low(rOCPS)
+			call SafePalCpy
 	; done
 	ret
 
@@ -518,6 +554,10 @@ xSplash2bpp:
 xSplashTilemap:
 	incbin "splash.tilemap"
 	.end
+
+section "mapcolors", romx, align[8]
+xMapColors:
+incbin "map.palmap"
 
 for V, 4
 section "map{x:V}", romx

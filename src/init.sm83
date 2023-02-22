@@ -44,7 +44,6 @@ xInit: ; now we can write sloppy code and no
 	; init single byte variables
 	; a is 0 from hDMA
 	ldh [hPad1], a
-	ldh [hPad1.diff], a
 	ldh [hVBlank], a
 	; enable interrupts
 	ld a, IEF_VBLANK
@@ -52,14 +51,14 @@ xInit: ; now we can write sloppy code and no
 	ei
 	; load palette
 	ld a, BCPSF_AUTOINC | 0
-	ld hl, Palette
-	lb bc, (Palette.end - Palette) / 4, low(rBCPS)
+	ld hl, xPalette + 8*3
+	lb bc, 8 / 4, low(rBCPS)
 	push af
 	push hl
 	call SafePalCpy
 	pop hl
 	pop af
-	lb bc, (Palette.end - Palette) / 4, low(rOCPS)
+	lb bc, 8 / 4, low(rOCPS)
 	call SafePalCpy
 	; hack
 	xor a
@@ -67,9 +66,9 @@ xInit: ; now we can write sloppy code and no
 	ld [wSOAM+3], a
 	jp Title
 
-Palette:
-	incbin "palette.pal"
-	.end
+xPalette::
+ds 8+4, $00
+incbin "palette.pal", 8, 128 - 8 - 4
 
 /* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
 
