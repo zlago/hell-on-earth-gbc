@@ -3,11 +3,18 @@ include "macros.inc"
 include "defines.inc"
 
 section "vblank", rom0
+Done: ; pop and return
+	pop hl
+	pop de
+	pop bc
+	pop af
+	reti
+
 VBlank:: ; actual handler todo: handle text
 	; check pending tasks
 		ldh a, [hVBlank]
 		and a
-		jr z, .done
+		jr z, Done
 	; display text
 		; check for the text task
 			and VBLANK_TEXT
@@ -36,7 +43,7 @@ VBlank:: ; actual handler todo: handle text
 		.noClear
 			; now copy
 			ld a, [wVBlankText.bank]
-			rom_bank 0 ; bank
+			rom_bank 0, 0 ; bank
 			ld a, [wVBlankText.src]
 			ld h, a ; source hi
 			ld a, [wVBlankText.counter]
@@ -57,11 +64,19 @@ VBlank:: ; actual handler todo: handle text
 			and ~VBLANK_TEXT
 			ldh [hVBlank], a
 	.skipText
-	.done ; pop and return
+	.done ; pop and return during blanking
 		rom_bank
 		pop hl
 		pop de
 		pop bc
+		; wait for mode 3 (draw) or mode 1 (vblank)
+		:ldh a, [rSTAT]
+		and %01
+		jr nz, :-
+		; wait for mode 0 (hblank) or mode 1
+		:ldh a, [rSTAT]
+		and STATF_BUSY
+		jr nz, :-
 		pop af
 		reti
 
