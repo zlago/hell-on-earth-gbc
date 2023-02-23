@@ -42,7 +42,8 @@ section "header", rom0[$100]
 	db $ce,$ed,$66,$66,$cc,$0d,$00,$0b,$03,$73,$00,$83
 	db $00,$0c,$00,$0d,$00,$08,$11,$1f,$88,$89,$00,$0e
 	; logo (bottom, not checked by gbc)
-	; commented out cause i decided i want 24B more rom0 ; ds 24, $5a
+	db $dc,$cc,$6e,$e6,$dd,$dd,$d9,$99,$bb,$bb,$67,$63
+    db $6e,$0e,$ec,$cc,$dd,$dc,$99,$9f,$bb,$b9,$33,$3e
 section "header2", rom0[$100+24+24+4]
 	; rest of header (handled by rgbfix)
 	ds $150-@, $00
@@ -81,6 +82,15 @@ TitleLoop::
 		ld a, high($769) | AUDHIGH_RESTART
 		ldh [rAUD1HIGH], a
 		.noClear
+	; swap palette if A is pressed
+		ld a, [hPad1.press]
+		and PADF_A
+		jr z, .noSwap
+		ldh a, [rBGP]
+		cpl
+		ldh [rBGP], a
+		ldh [rOBP0], a
+		.noSwap
 	; go to next screen once start is hit
 		ld a, [hPad1.press]
 		and PADF_START
@@ -259,16 +269,16 @@ PauseLoop::
 
 section "objects", rom0
 Display: ; todo: replace this nonsense
-	ld a, bank(wxActor)
+	ld a, bank(wActor)
 	ldh [rSMBK], a
-	ld a, [wxActor.y]
+	ld a, [wActor.y]
 	res 4, a
 	add 2 ; offset
 	add a
 	add a
 	add a
 	ld [wSOAM+0], a
-	ld a, [wxActor.x]
+	ld a, [wActor.x]
 	res 4, a
 	inc a ; offset
 	add a
@@ -312,9 +322,9 @@ MovePlayer: ; this is a black box im telling you
 		ld b, a
 		; todo: wrap this into a 
 		; vertically
-			ld a, [wxActor.x]
+			ld a, [wActor.x]
 			ld l, a
-			ld a, [wxActor.y]
+			ld a, [wActor.y]
 			; down
 			sla b
 			adc 0
@@ -329,10 +339,10 @@ MovePlayer: ; this is a black box im telling you
 			; discard if so
 			jr nz, .skipV
 			ld a, c
-			ld [wxActor.y], a
+			ld [wActor.y], a
 			.skipV
 		; horizontally
-			ld a, [wxActor.y]
+			ld a, [wActor.y]
 			ld h, a
 			ld a, l
 			; left
@@ -348,18 +358,18 @@ MovePlayer: ; this is a black box im telling you
 			; discard if so
 			jr nz, .skipH
 			ld a, l
-			ld [wxActor.x], a
+			ld [wActor.x], a
 			.skipH
 		ld c, $f0
 	; check if hi(plrX) != hi(CamX)
-		ld a, [wxActor.x]
+		ld a, [wActor.x]
 		ld b, a
 		ldh a, [hCamera.x]
 		xor b
 		and c
 		jr nz, .load
 	; check if hi(plrY) != hi(CamY)
-		ld a, [wxActor.y]
+		ld a, [wActor.y]
 		ld b, a
 		ldh a, [hCamera.y]
 		xor b
@@ -390,14 +400,14 @@ FetchMapTile:: ; h - Y, l - X, rROMB = bank, hl = tile, clobbers de
 
 section "loadmap", rom0
 LoadMap::
-	ld a, bank(wxActor)
+	ld a, bank(wActor)
 	ldh [rSMBK], a
 	; fetch the screen bank & pointer, update camera
-		ld a, [wxActor.y]
+		ld a, [wActor.y]
 		and $f0
 		ldh [hCamera.y], a
 		ld h, a
-		ld a, [wxActor.x]
+		ld a, [wActor.x]
 		and $f0
 		ldh [hCamera.x], a
 		ld l, a
@@ -554,11 +564,12 @@ CollideMap:: ; h - Y, l - X, h = %01000000 | (h & %00111111)
 	ret
 
 section "actors", wramx, align[8]
-wxActor::
+wActor::
 	.type:: ds 1
 	.y::    ds 1
 	.x::    ds 1
-.next:: ds 256*(MAX_ACTORS-1)
+	ds 256 - (@ - wActor)
+.next:: ds 256*(MAX_ACTORS - 1)
 
 section "tileset", romx
 xTileset1bpp:

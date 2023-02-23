@@ -1,7 +1,7 @@
 # rgbds defines
 # flags
 ASM_FLAGS  = -h -Wall -p ${PAD_VAL} $(addprefix -I,${INC_PATHS}) $(addprefix -D,${DEFINES})
-LINK_FLAGS = -p ${PAD_VAL}
+LINK_FLAGS = -w -p ${PAD_VAL}
 FIX_FLAGS  = -f hg -l 0x33 -j -C -t ${HDR_TITLE} -k ${HDR_LICENSEE} -m ${HDR_MBC} -r ${HDR_RAM} -n ${HDR_VER} -p ${PAD_VAL}
 # include paths
 INC_PATHS = src/inc/ src/res/ res/

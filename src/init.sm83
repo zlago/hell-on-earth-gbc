@@ -8,10 +8,10 @@ section "init", rom0
 ConsoleCheck:: ; this will be ran at bootup
 	; check console
 	cp BOOTUP_A_CGB ; check console
-	jr z, Init
+	/*jr z, Init
 	; not GBC, jump to ROMX, display error and lock up
 	rom_bank xWrongConsole, 0 ; bank gets saved in romx
-	jp xWrongConsole
+	jp xWrongConsole*/
 Init:: ; this will be ran on software reset
 	; GBC, jump to ROMX to continue init
 	rom_bank xInit, 0 ; bank gets saved in romx
@@ -22,11 +22,6 @@ xInit: ; now we can write sloppy code and no
 	; one can complain about the ROM we waste!
 	ldh [hShadowROMB], a ; done in romx to save 2 bytes
 	ld sp, wStack.origin ; init sp to a saner place
-	; init LCDC
-	ld a, LCDCF_ON|LCDCF_BGON|LCDCF_WINON|LCDCF_OBJON|LCDCF_BLK21|LCDCF_BG0|LCDCF_WIN1|LCDCF_OBJ8
-	ldh [rLCDC], a
-	ld a, $ff
-	ldh [rWY], a
 	; zero-init things
 		; copy OAM DMA
 			ld hl, DMAcopy
@@ -45,6 +40,14 @@ xInit: ; now we can write sloppy code and no
 	; a is 0 from hDMA
 	ldh [hPad1], a
 	ldh [hVBlank], a
+	; init PPU
+	ld a, LCDCF_ON|LCDCF_BGON|LCDCF_WINON|LCDCF_OBJON|LCDCF_BLK21|LCDCF_BG0|LCDCF_WIN1|LCDCF_OBJ8
+	ldh [rLCDC], a
+	ld a, %00_11_11_11
+	ldh [rBGP], a
+	ldh [rOBP0], a
+	ld a, $ff
+	ldh [rWY], a
 	; enable interrupts
 	ld a, IEF_VBLANK
 	ldh [rIE], a
@@ -83,14 +86,14 @@ NewSave::
 		ld a, SAVE_VERSION
 		ld [wSave.version], a
 	; init player position
-		ld a, bank(wxActor)
+		ld a, bank(wActor)
 		ldh [rSMBK], a
 		ld a, START_Y
-		ld [wxActor.y], a
+		ld [wActor.y], a
 		if START_X != START_Y
 			ld a, START_X
 		endc
-		ld [wxActor.x], a
+		ld [wActor.x], a
 		xor a
 		ld [wSave.hp], a
 		ld [wSave.crc], a ; i get uninit memory reads from this fucker
@@ -112,11 +115,11 @@ NewSave::
 section "savesave", rom0
 SaveSave::
 	; copy player position
-		ld a, bank(wxActor)
+		ld a, bank(wActor)
 		ldh [rSMBK], a
-		ld a, [wxActor.y]
+		ld a, [wActor.y]
 		ld [wSave.y], a
-		ld a, [wxActor.x]
+		ld a, [wActor.x]
 		ld [wSave.x], a
 	; checksum
 		ld de, wSave
@@ -189,12 +192,12 @@ LoadSave:: ; load a save file (a = 0), or returns an error (a != 0)
 			dec c
 			ret nz
 	; set player stuff
-		ld a, bank(wxActor)
+		ld a, bank(wActor)
 		ldh [rSMBK], a
 		ld a, [wSave.y]
-		ld [wxActor.y], a
+		ld [wActor.y], a
 		ld a, [wSave.x]
-		ld [wxActor.x], a
+		ld [wActor.x], a
 	; done
 		xor a
 			assert LOAD_SUCCESS == 0
@@ -233,7 +236,7 @@ sSave::
 
 /* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
 
-section "xwrongconsole", romx
+/*section "xwrongconsole", romx
 xWrongConsole: ; puts a tiny "GBC-only" text in the center of the screen
 	ldh [hShadowROMB], a ; done in romx to save 2 bytes
 	; load "GBC-only" tiles into VRAM
@@ -293,4 +296,4 @@ dw `..##.#.#
 dw `.##.....
 ds 6, $00
 .gfxEnd
-popo
+popo*/
