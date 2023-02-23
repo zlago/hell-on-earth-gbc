@@ -94,7 +94,15 @@ TitleLoop::
 
 section "main", rom0
 Main::
-	call LoadSave
+	; try to load save
+		call LoadSave
+		and a
+			assert LOAD_SUCCESS == 0
+		jr z, .loadSuccess
+		cp LOAD_WRONGVER
+		jp z, Title
+		call NewSave
+		.loadSuccess
 	; load tileset
 		rom_bank xTileset2bpp
 		ld hl, xTileset2bpp
@@ -149,6 +157,8 @@ MainLoop::
 		call MovePlayer
 	; fill shadowOAM
 		call Display
+	; tick game length timer
+		call TickTimer
 	; pause (if start is pressed)
 		ld a, [hPad1.press]
 		and PADF_START
@@ -209,6 +219,10 @@ if def(PAUSE_SLIDE_SPEED) == 0
 	assert 128 % PAUSE_SLIDE_SPEED == 0
 Pause::
 	; todo: HUD
+	; todo: icons for various things
+		; (currently not possible as this
+		; will fuck up rendering which is
+		; a hack and needs to be fixed)
 	; load the menu map
 		load_menu_map
 	; slide the window in
@@ -221,10 +235,13 @@ Pause::
 		jr nz, .win
 	; save
 		call SaveSave
+	; 
 PauseLoop::
 	halt
 	; poll input
+		push bc
 		call Joy
+		pop bc
 	; unpause (if start is pressed)
 		ld a, [hPad1.press]
 		and PADF_START
@@ -258,6 +275,31 @@ Display: ; todo: replace this nonsense
 	add a
 	add a
 	ld [wSOAM+1], a
+	ret
+
+section "time", rom0
+TickTimer: ; increment the timer
+; (t - thirds, s - seconds, m - minutes, h - hours)
+	ld hl, wSave.time
+	lb bc, $60, $01 ; t/s/m in an s/m/h, inc a
+	ld e, 3 ; 1 iteration for each of t, s, m
+.loop ; increment t/s/m
+	ld a, [hl]
+	add c ; inc a with proper flags
+	daa ; then adjust
+	ld [hl], a
+	sub b ; sets carry if t/s/m didnt overflow
+	ret c
+	; save on overflow, and overflow into the next value
+	ld [hl+], a
+	dec e
+	jr nz, .loop
+	; increment h
+	ld a, [hl]
+	inc a
+	ret z ; dont increment on overflow
+		; (if you get 255h legit i will give you <absolutely nothing>)
+	ld [hl], a
 	ret
 
 section "player", rom0

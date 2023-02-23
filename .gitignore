@@ -10,5 +10,7 @@ concept/
 *.sublime-workspace
 *.sublime-project
 *.ase
+# as on the tin
+src/secret.sm83
 # not sure if this one will ever be used
 hh/
