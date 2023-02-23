@@ -50,12 +50,12 @@ section "header2", rom0[$100+24+24+4]
 section "title", rom0
 Title::
 	; load splash screen
-		rom_bank xSplash2bpp
+		rom_bank xSplash1bpp
 		; load tileset
-			ld hl, xSplash2bpp
+			ld hl, xSplash1bpp
 			ld de, _VRAM+$1000
-			ld bc, xSplash2bpp.end - xSplash2bpp
-			call SafeCpy
+			ld bc, xSplash1bpp.end - xSplash1bpp
+			call Safe1bppCpy
 		; load map
 			ld hl, xSplashTilemap
 			ld de, _SCRN0
@@ -104,21 +104,21 @@ Main::
 		call NewSave
 		.loadSuccess
 	; load tileset
-		rom_bank xTileset2bpp
-		ld hl, xTileset2bpp
+		rom_bank xTileset1bpp
+		ld hl, xTileset1bpp
 		ld de, vTileset
 		ld bc, vTileset.end - vTileset
-		call SafeCpy
+		call Safe1bppCpy
 	; load player
 		ld hl, xPlayer2bpp
 		ld de, _VRAM
 		ld bc, xPlayer2bpp.end - xPlayer2bpp
 		call SafeCpy
 	; load menumap tiles
-		rom_bank xMenuMap2bpp
-		ld hl, xMenuMap2bpp
+		rom_bank xMenuMap1bpp
+		ld hl, xMenuMap1bpp
 		ld de, vMenuText
-		ld bc, xMenuMap2bpp.end - xMenuMap2bpp
+		ld bc, xMenuMap1bpp.end - xMenuMap1bpp
 		call Safe1bppCpy
 	; todo: load statusbar
 	; set window
@@ -561,12 +561,17 @@ wxActor::
 .next:: ds 256*(MAX_ACTORS-1)
 
 section "tileset", romx
-xTileset2bpp:
+xTileset1bpp:
 	load "vtileset", vram[$9000]
 	vTileset:
-	incbin "tileset.2bpp"
+	incbin "tileset.1bpp"
 	.end
 	endl
+	pushs
+	section "vtileset2", vram[$9000+(vTileset.end - vTileset)]
+	vTileset2:
+	ds vTileset.end - vTileset
+	pops
 xPlayer2bpp:
 	incbin "player.2bpp"
 	.end
@@ -582,7 +587,7 @@ vMenuText:
 	.end
 
 section "menumap", romx
-xMenuMap2bpp:
+xMenuMap1bpp:
 	incbin "menumap.1bpp"
 	.end
 xMenuMapTilemap:
@@ -590,8 +595,8 @@ xMenuMapTilemap:
 	.end
 
 section "splash", romx
-xSplash2bpp:
-	incbin "splash.2bpp"
+xSplash1bpp:
+	incbin "splash.1bpp"
 	.end
 xSplashTilemap:
 	incbin "splash.tilemap"
