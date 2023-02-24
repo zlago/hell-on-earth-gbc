@@ -252,11 +252,27 @@ PauseLoop::
 		push bc
 		call Joy
 		pop bc
+	; reset pos if select is pressed
+		ld a, [hPad1.press]
+		and PADF_SELECT
+		jr z, .noReset
+		ld a, bank(wActor)
+		ldh [rSMBK], a
+		ld a, START_Y
+		ld [wActor.y], a
+		if START_X != START_Y
+			ld a, START_X
+		endc
+		ld [wActor.x], a
+		call LoadMap
+		jr .unpause
+		.noReset
 	; unpause (if start is pressed)
 		ld a, [hPad1.press]
 		and PADF_START
 	jr z, PauseLoop
 	; slide the window out
+	.unpause
 	ld a, WX_OFS
 	.win
 	halt

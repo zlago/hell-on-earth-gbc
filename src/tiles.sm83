@@ -2,6 +2,10 @@ include "defines.inc"
 
 section "tileprop", rom0, align[8]
 TileProperties::
-ds  8, 0          ; w on w dither
+ds  8, 0          ; w on b dither
 ds  8, TILE_SOLID ; b on w dither
 ds 16, TILE_SOLID ; wall tiles
+ds 16, TILE_SOLID, 0 ; vats
+ds 144, 0         ; unused
+ds 64, 0          ; text & map
+align 8
