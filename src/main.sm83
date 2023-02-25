@@ -127,6 +127,9 @@ Title:: ; load splash screen
 		ld hl, _SCRN0
 		ld bc, (_SCRN1 - _SCRN0) * 2
 		call SafeSet
+	; load save
+		ld a, 1
+		call LoadSave
 	jp Main
 
 FuckingCursor:
@@ -139,6 +142,10 @@ FuckingCursor:
 	db %00110000
 	db %00000000
 	.end
+
+section "savestate", wram0
+wSaveFileState: ds 7 ; 1 byte for each file
+wCurrentSaveFile: ds 1 ; 1 byte for the currently selected file
 
 	/* clear save if select is pressed
 		ld a, [hPad1.press]
@@ -169,15 +176,6 @@ FuckingCursor:
 
 section "main", rom0
 Main::
-	; try to load save
-		call LoadSave
-		and a
-			assert LOAD_SUCCESS == 0
-		jr z, .loadSuccess
-		cp LOAD_WRONGVER
-		jp z, Title
-		call NewSave
-		.loadSuccess
 	; load tileset
 		rom_bank xTileset1bpp
 		ld hl, xTileset1bpp
@@ -249,11 +247,11 @@ macro load_menu_map
 		ld c, (xMapMenuTilemap.end - xMapMenuTilemap) / 8
 	.loopBytes ; put bits in b and length%8 in c
 		push bc
-		ld a, low(wSave.mapEnd)
+		ld a, low(wSaveFile.mapEnd)
 		sub c
-			assert high(wSave.map) == high(wSave.mapEnd)
+			assert high(wSaveFile.map) == high(wSaveFile.mapEnd)
 		push de
-		ld d, high(wSave.mapEnd)
+		ld d, high(wSaveFile.mapEnd)
 		ld e, a
 		ld a, [de]
 		pop de
@@ -371,7 +369,7 @@ Display: ; todo: replace this nonsense
 section "time", rom0
 TickTimer: ; increment the timer
 ; (t - thirds, s - seconds, m - minutes, h - hours)
-	ld hl, wSave.time
+	ld hl, wSaveFile.time
 	lb bc, $60, $01 ; t/s/m in an s/m/h, inc a
 	ld e, 3 ; 1 iteration for each of t, s, m
 .loop ; increment t/s/m
@@ -571,10 +569,10 @@ LoadMap::
 			srl b ; xxx....0, . -> .xxx...., 0
 			adc a ; ....4321, 0 -> ...43210, .
 			swap b; .xxx...., . -> .....xxx, .
-		; set hl to wSave.map + a
-			add low(wSave.map)
-				assert high(wSave.map) == high(wSave.mapEnd)
-			ld h, high(wSave.map)
+		; set hl to wSaveFile.map + a
+			add low(wSaveFile.map)
+				assert high(wSaveFile.map) == high(wSaveFile.mapEnd)
+			ld h, high(wSaveFile.map)
 			ld l, a
 		; set a's bth bit
 			inc b

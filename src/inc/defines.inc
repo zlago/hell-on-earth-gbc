@@ -9,13 +9,14 @@ def TILE_SOLID equ %00000001
 ; vblank tasks
 def VBLANK_TEXT equ %00000001
 ; save constants
-def SAVE_VERSION equ $00 ; increment this each time the format updates
+def SAVE_VERSION equ $01 ; increment this each time the format updates
+	; $00 is treated as 'empty file'
 if def(VERIFY) == 0
-	def SAVE_VERIFY equs "ur a girlkisser"
+	def SAVE_VERIFY equs "'hoe' best title"
 	endc
-; load output
+; save verification outputs
 rsreset
-def LOAD_SUCCESS rb
-def LOAD_WRONGVER rb
-def LOAD_WRONGVERIFY rb
-def LOAD_WRONGCRC rb
+def SAVE_VALID    rb ; save is valid
+def SAVE_EMPTY    rb ; file is empty
+def SAVE_CHECKSUM rb ; checksum doesnt match
+def SAVE_OLD      rb ; save version mismatch

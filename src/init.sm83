@@ -75,110 +75,114 @@ incbin "palette.pal", 8, 128 - 8 - 4
 
 /* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
 
-section "newsave", rom0
-NewSave::
-	; verify
-		ld hl, Verify
-		ld de, wSave.verify
-		ld b, Verify.end - Verify
-		call ShortCpy
+section "createsavefile", rom0
+CreateSave:: ; a - file to save to
+	push af
+	; clear
+		ld hl, wSaveFile
+		ld b, 0
+			assert wSaveFile.end - wSaveFile == $100
+		call ShortSet
 	; set version
 		ld a, SAVE_VERSION
-		ld [wSave.version], a
-	; init player position
-		ld a, bank(wActor)
-		ldh [rSMBK], a
+		ld [wSaveFile.version], a
+	; init player
 		ld a, START_Y
 		ld [wActor.y], a
 		if START_X != START_Y
 			ld a, START_X
 		endc
 		ld [wActor.x], a
-		xor a
-		ld [wSave.hp], a
-		ld [wSave.crc], a ; i get uninit memory reads from this fucker
-	; clear map
-		ld hl, wSave.map
-		ld b, wSave.mapEnd - wSave.map
-		call ShortSet
-	; clear flags
-		ld hl, wSave.flags
-		ld b, wSave.flagsEnd - wSave.flags
-		call ShortSet
-	; clear time
-		ld hl, wSave.time
-		ld b, wSave.timeEnd - wSave.time
-		call ShortSet
-	; save
-		jp SaveSave
+	; done, now save the file
+		jp SaveSave.prePushed
 
-section "savesave", rom0
-SaveSave::
-	; copy player position
-		ld a, bank(wActor)
-		ldh [rSMBK], a
+section "savesavefile", rom0
+SaveSave:: ; a - file to save to
+	push af
+	.prePushed
+	; copy player data
 		ld a, [wActor.y]
-		ld [wSave.y], a
+		ld [wSaveFile.y], a
 		ld a, [wActor.x]
-		ld [wSave.x], a
-	; checksum
-		ld de, wSave
-		ld bc, wSave.crc - wSave
+		ld [wSaveFile.x], a
+	; calculate and store checksum
+		ld de, wSaveFile
+		ld bc, wSaveFile.crc - wSaveFile
 		call Crc32
-		dec de ; Crc32 returns with de = wSave.crc + 1
+		dec de ; Crc32 returns with de = wSaveFile.crc + 1
 		ld b, 4
 		call ShortCpy
-	; copy to sram
-		ld hl, wSave
-		ld de, sSave
-		ld b, wSave.end - wSave
+	; copy to SRAM
+		pop af
+		add high(sSave)
+		ld d, a
+		ld e, low(sSave)
+		ld hl, wSaveFile
+		ld b, 0
+			assert wSaveFile.end - wSaveFile == $100
 		ld a, CART_SRAM_ENABLE
 		ld [rRAMG], a
 		call ShortCpy
 		xor a
-		;ld [rRAMG], a
-	ret
+		ld [rRAMG], a
+	; done
+		ret
 
-section "loadsave", rom0
-LoadSave:: ; load a save file (a = 0), or returns an error (a != 0)
+section "loadsavefile", rom0
+LoadSave:: ; a - file to load
 	; copy to wram
-		ld hl, sSave
-		ld de, wSave
-		ld b, wSave.end - wSave
+		add high(sSave)
+		ld h, a
+		ld l, low(sSave)
+		ld de, wSaveFile
+		ld b, 0
+			assert wSaveFile.end - wSaveFile == $100
 		ld a, CART_SRAM_ENABLE
 		ld [rRAMG], a
 		call ShortCpy
 		xor a
-		;ld [rRAMG], a
-	; verify
-		ld hl, Verify
-		ld de, wSave.verify
-		lb bc, Verify.end - Verify, 1
-		.verifyLoop
-			ld a, [de]
-			inc de
-			cp [hl]
-			inc hl
-			jr z, .verifyCorrect
-			inc c
-			.verifyCorrect
-			dec b
-			jr nz, .verifyLoop
-			ld a, LOAD_WRONGVERIFY
-			dec c
-			ret nz
-	; check version
-		ld a, [wSave.version]
-		cp SAVE_VERSION
-		ld a, LOAD_WRONGVER
+		ld [rRAMG], a
+	; load player stuff
+		ld a, [wSaveFile.y]
+		ld [wActor.y], a
+		ld a, [wSaveFile.x]
+		ld [wActor.x], a
+	; done
+		ret
+
+section "verifysavefile", rom0
+VerifySave:: ; a - file to check, a = file condition
+	; copy to wram
+		add high(sSave)
+		ld h, a
+		ld l, low(sSave)
+		ld de, wSaveFile
+		ld b, 0
+			assert wSaveFile.end - wSaveFile == $100
+		ld a, CART_SRAM_ENABLE
+		ld [rRAMG], a
+		call ShortCpy
+		xor a
+		ld [rRAMG], a
+	; check if empty
+		ld a, [wSaveFile.version]
+		ld b, a
+		and a
+		ld a, SAVE_EMPTY
+		ret z
+	; check if old
+		ld a, SAVE_VERSION
+		cp b
+		ld a, SAVE_OLD
 		ret nz
-	; check checksum
-		ld de, wSave
-		ld bc, wSave.crc - wSave
+	; calculate checksum
+		ld de, wSaveFile
+		ld bc, wSaveFile.crc - wSaveFile
 		call Crc32
-		dec de ; Crc32 returns with de = wSave.crc + 1
-		lb bc, 4, 1
-		.crcLoop
+	; and compare it
+		dec de ; Crc32 returns with de = wSaveFile.crc + 1
+		lb bc, 4, 1 ; 4 bytes, and must be 1
+		.crcLoop ; funkiest loop
 			ld a, [de]
 			inc de
 			cp [hl]
@@ -188,19 +192,11 @@ LoadSave:: ; load a save file (a = 0), or returns an error (a != 0)
 			.crcCorrect
 			dec b
 			jr nz, .crcLoop
-			ld a, LOAD_WRONGCRC
-			dec c
+			ld a, SAVE_CHECKSUM
+			dec c ; if all bytes match, c will be 0 after this
 			ret nz
-	; set player stuff
-		ld a, bank(wActor)
-		ldh [rSMBK], a
-		ld a, [wSave.y]
-		ld [wActor.y], a
-		ld a, [wSave.x]
-		ld [wActor.x], a
-	; done
-		xor a
-			assert LOAD_SUCCESS == 0
+	; if we got this far, all is well!
+		ld a, SAVE_VALID
 		ret
 
 section "verify", rom0
@@ -210,13 +206,16 @@ Verify::
 	assert @ - Verify <= 16
 
 section "saveshadow", wram0, align[8]
-wSave::
+wSave:
+	.verify ds 16 ; verification string
+	.verifyEnd
+	.end
+
+section "savefileshadow", wram0, align[8]
+wSaveFile::
 	; please increment SAVE_VERSION when the save format is updated,
 	; please do not move the verification string or the version byte
 	; only change the verification string if theres a good reason to
-	.verify ds 16 ; verification string
-	.verifyEnd
-	.version ds 1 ; save version
 	.map:: ds 16*16/8 ; "room seen" bitfield
 		.mapEnd::
 	.flags:: ds 256/8 ; 256 flags for.. whatever
@@ -226,13 +225,24 @@ wSave::
 	.hp ds 1 ; player HP (unimplemented ofc)
 	.time:: ds 4 ; time in thirds, seconds, minutes, and hours
 		.timeEnd:: ; hours do not overflow past 255
-	.crc ds 4 ; checksum must be last
+	; please keep these last
+	ds 251 - (@ - wSaveFile) ; pad
+	.version ds 1 ; save version
+	.crc ds 4 
 	.end
-	assert high(wSave) == high(.end)
+	align 8
 
 section "save", sram[$a000]
 sSave::
-	ds wSave.end - wSave
+	.settings:: ds 256 ; game settings, etc
+	.1:: ds wSaveFile.end - wSaveFile ; file A
+	.2:: ds wSaveFile.end - wSaveFile ; file B
+	.3:: ds wSaveFile.end - wSaveFile ; etc
+	.4:: ds wSaveFile.end - wSaveFile
+	.5:: ds wSaveFile.end - wSaveFile
+	.6:: ds wSaveFile.end - wSaveFile
+	.7:: ds wSaveFile.end - wSaveFile
+	align 8
 
 /* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
 
