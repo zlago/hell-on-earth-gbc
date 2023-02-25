@@ -214,6 +214,47 @@ Popslide:: ; a - length, hl - src, de - dest, clobbers bc, align 4!!
 	ld sp, hl
 	ret
 
+; fucking cursed
+section "saferectcopy", rom0
+SafeRectCopy:: ; hl - src, de - dest, b - rows c - columns, align 8, no more than 8 rows
+	; calc offset
+		ld a, SCRN_VX_B
+		sub c
+		push af
+		push bc
+	.loop ; copy bytes
+		; wait for access
+			ldh a, [rSTAT]
+			and STATF_BUSY
+			jr nz, .loop
+		; copy a byte
+			ld a, [hl+]
+			ld [de], a
+			inc e
+			dec c
+			jr nz, .loop
+	; adjust regs
+		; .
+			pop bc
+		; adjust fucking hl
+			pop af
+			push af
+			add l
+			ld l, a
+		; adjust fucking de
+			pop af
+			push af
+			add e
+			ld e, a
+		; dec
+			dec b
+			push bc
+			jr nz, .loop
+	; done
+		pop bc
+		pop af
+		ret
+
 section "DMA", rom0
 DMAcopy:: ; copy this to HRAM then call hDMA
 load "hDMA", hram
@@ -238,7 +279,7 @@ if def(PLAYERS) == 0
 endc
 
 section "joy", rom0 ; wow this is such a mess
-Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers (b)c, hl, de
+Joy:: ; reads joypad, b - no. of joypads (if more than 1), clobbers af, (b)c, hl, de
 	ld hl, hPad1
 	ld c, low(rP1)
 .loop

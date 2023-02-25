@@ -28,7 +28,7 @@ HDR_VER = 0
 # dependencies
 ASM_REQS = $(shell find src/inc/ -name '*.inc')
 LINK_REQS = $(patsubst src/%.sm83,obj/%.o,$(shell find src/ -name '*.sm83'))
-GFX_REQS = res/map.bin res/tileset.1bpp res/player.2bpp res/splash.1bpp res/flavor.bin res/menumap.tilemap
+GFX_REQS = res/map.bin res/tileset.1bpp res/player.2bpp res/splash.1bpp res/flavor.bin res/mapmenu.tilemap res/savemenu.1bpp
 
 .PHONY: all release dev clean
 
@@ -58,8 +58,8 @@ res/flavor.bin: src/res/flavor.png src/res/1bit.dpal res/
 res/map.bin: src/res/map.png res/tilesetfull.2bpp src/res/rev.dpal res/
 	superfamiconv map -v --mode gb --split-width 256 --split-height 256 -F -t res/tilesetfull.2bpp -p src/res/rev.dpal -i $< -d $@
 
-res/menumap.tilemap: src/res/menumap.png src/res/palette.pal res/
-	rgbgfx -u -b 224 -N 24 -d 1 -o res/menumap.1bpp -q res/map.palmap -t $@ $< -c gbc:src/res/palette.pal -n 16
+res/mapmenu.tilemap: src/res/mapmenu.png src/res/palette.pal res/
+	rgbgfx -u -b 224 -N 24 -d 1 -o res/mapmenu.1bpp -q res/map.palmap -t $@ $< -c gbc:src/res/palette.pal -n 16
 
 res/tileset.1bpp: src/res/tileset.png res/
 	rgbgfx -d 1 -c "#000, #fff, #00f, #0ff" -o $@ $<
@@ -72,6 +72,9 @@ res/player.2bpp: src/res/player.png res/
 
 res/splash.1bpp: src/res/splash.png res/
 	rgbgfx -d 1 -u -c "#000, #fff, #00f, #0ff" -o $@ -t res/splash.tilemap $<
+
+res/savemenu.1bpp: src/res/savemenu.png res/
+	rgbgfx -b 128 -u -d 1 -c "#000, #fff, #00f, #0ff" -o $@ -t res/savemenu.tilemap $<
 
 obj/%.o: src/%.sm83 $(ASM_REQS) $(GFX_REQS) obj/ 
 	rgbasm ${ASM_FLAGS} -o $@ $<

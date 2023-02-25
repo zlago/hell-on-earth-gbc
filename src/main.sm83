@@ -49,24 +49,98 @@ section "header2", rom0[$100+24+24+4]
 	ds $150-@, $00
 
 section "title", rom0
-Title::
-	; load splash screen
+Title:: ; load splash screen
 		rom_bank xSplash1bpp
 		; load tileset
 			ld hl, xSplash1bpp
-			ld de, _VRAM+$1000
+			ld de, _VRAM + $1000
 			ld bc, xSplash1bpp.end - xSplash1bpp
+			call Safe1bppCpy
+		; load save tiles???
+			ld hl, xSaveMenu1bpp
+			ld de, _VRAM + $800
+			ld bc, xSaveMenu1bpp.end - xSaveMenu1bpp
+			call Safe1bppCpy
+		; load cursor
+			ld hl, FuckingCursor
+			ld de, _VRAM + $0
+			ld bc, FuckingCursor.end - FuckingCursor
 			call Safe1bppCpy
 		; load map
 			ld hl, xSplashTilemap
 			ld de, _SCRN0
-			ld bc, xSplashTilemap.end - xSplashTilemap
+			ld bc, 144 * 4
 			call SafeCpy
-TitleLoop::
+	TitleSplash:: ; load specifically the `Press [Start]`
+		rom_bank xSplashTilemap
+		ld hl, xSplashTilemap + 96 * 4
+		ld de, _SCRN0 + 96 * 4
+		ld bc, 24 * 4
+		call SafeCpy
+	.loop
 	halt
 	; poll
 		call Joy
-	; clear save if select is pressed
+	; wait untill start is pressed
+		ld a, [hPad1.press]
+		and PADF_START
+		jr z, .loop
+	TitleMenu:: ; load the menu thing
+		rom_bank xSplashTilemap
+		ld hl, xSplashTilemap + 144 * 4
+		ld de, _SCRN0 + 96 * 4
+		ld bc, 24 * 4
+		call SafeCpy
+	.loop
+	halt
+	; poll
+		call Joy
+	; wait untill start is pressed
+		ld a, [hPad1.press]
+		and PADF_START
+		jr z, .loop
+	TitleSaves: ; load the funny menu
+		ld hl, xSaveMenuTilemap
+		ld de, _SCRN1
+		lb bc, 8, 5
+		call SafeRectCopy
+			assert xSaveMenuTilemap.end - 256 <= xSaveMenuTilemap
+		ld a, WX_OFS
+		ldh [rWX], a
+		ld a, 144
+		.win
+		halt
+		sub 8
+		ldh [rWY], a
+		cp 144 - 64
+		jr nz, .win
+		.loop
+		halt
+		; poll
+			call Joy
+		; wait untill start is pressed
+			ld a, [hPad1.press]
+			and PADF_START
+			jr z, .loop
+	; clear map
+		xor a
+		ld hl, _SCRN0
+		ld bc, (_SCRN1 - _SCRN0) * 2
+		call SafeSet
+	jp Main
+
+FuckingCursor:
+	db %00000000
+	db %00110000
+	db %00101000
+	db %00100100
+	db %00100100
+	db %00101000
+	db %00110000
+	db %00000000
+	.end
+
+	/* clear save if select is pressed
 		ld a, [hPad1.press]
 		and PADF_SELECT
 		jr z, .noClear
@@ -81,8 +155,9 @@ TitleLoop::
 		ldh [rAUD1LOW], a
 		ld a, high($769) | AUDHIGH_RESTART
 		ldh [rAUD1HIGH], a
-		.noClear
-	; swap palette if A is pressed
+		.noClear */
+
+	/* swap palette if A is pressed
 		ld a, [hPad1.press]
 		and PADF_A
 		jr z, .noSwap
@@ -90,17 +165,7 @@ TitleLoop::
 		cpl
 		ldh [rBGP], a
 		ldh [rOBP0], a
-		.noSwap
-	; go to next screen once start is hit
-		ld a, [hPad1.press]
-		and PADF_START
-	jr z, TitleLoop
-	; clear map
-		xor a
-		ld hl, _SCRN0
-		ld bc, _SCRN1 - _SCRN0
-		call SafeSet
-	jp Main
+		.noSwap */
 
 section "main", rom0
 Main::
@@ -124,11 +189,11 @@ Main::
 		ld de, _VRAM
 		ld bc, xPlayer2bpp.end - xPlayer2bpp
 		call SafeCpy
-	; load menumap tiles
-		rom_bank xMenuMap1bpp
-		ld hl, xMenuMap1bpp
+	; load the map menu tiles
+		rom_bank xMapMenu1bpp
+		ld hl, xMapMenu1bpp
 		ld de, vMenuText
-		ld bc, xMenuMap1bpp.end - xMenuMap1bpp
+		ld bc, xMapMenu1bpp.end - xMapMenu1bpp
 		call Safe1bppCpy
 	; todo: load statusbar
 	; set window
@@ -151,7 +216,7 @@ Main::
 		jr nz, .copyLoop
 		add hl, bc
 		ld b, c
-		ld a, low(vMapText>>4) + 32
+		ld a, low(vMapText >> 4) + 32
 		cp e
 		jr nz, .copyLoop
 	; load the map
@@ -178,10 +243,10 @@ MainLoop::
 macro load_menu_map
 	; first some init
 		; hl - dst, de - src, c (stack) - len/8 or map bitfield byte, c - len%8, b - bits
-		rom_bank xMenuMapTilemap
-		ld de, xMenuMapTilemap
+		rom_bank xMapMenuTilemap
+		ld de, xMapMenuTilemap
 		ld hl, _SCRN1+4
-		ld c, (xMenuMapTilemap.end - xMenuMapTilemap) / 8
+		ld c, (xMapMenuTilemap.end - xMapMenuTilemap) / 8
 	.loopBytes ; put bits in b and length%8 in c
 		push bc
 		ld a, low(wSave.mapEnd)
@@ -236,12 +301,12 @@ Pause::
 	; load the menu map
 		load_menu_map
 	; slide the window in
-		ld a, WX_OFS+128
+		ld a, WX_OFS + 128
 		.win
 		halt
 		sub PAUSE_SLIDE_SPEED
 		ldh [rWX], a
-		cp a, WX_OFS
+		cp a, WX_OFS + 0
 		jr nz, .win
 	; save
 		call SaveSave
@@ -273,12 +338,12 @@ PauseLoop::
 	jr z, PauseLoop
 	; slide the window out
 	.unpause
-	ld a, WX_OFS
+	ld a, WX_OFS + 0
 	.win
 	halt
 	add PAUSE_SLIDE_SPEED
 	ldh [rWX], a
-	cp a, WX_OFS+128
+	cp a, WX_OFS + 128
 	jr nz, .win
 	; done
 	ret
@@ -609,24 +674,33 @@ vMapText::
 	.end::
 
 section "menutext", vram[$8e00]
-vMenuText:
+vMenuText: ; mmm this aged so well
 	ds $10 * 16 * 2
 	.end
 
-section "menumap", romx
-xMenuMap1bpp:
-	incbin "menumap.1bpp"
+section "mapmenu", romx
+xMapMenu1bpp:
+	incbin "mapmenu.1bpp"
 	.end
-xMenuMapTilemap:
-	incbin "menumap.tilemap"
+xMapMenuTilemap:
+	incbin "mapmenu.tilemap"
 	.end
 
-section "splash", romx
+section "titledata", romx
 xSplash1bpp:
 	incbin "splash.1bpp"
 	.end
 xSplashTilemap:
 	incbin "splash.tilemap"
+	.end
+xSaveMenu1bpp:
+	incbin "savemenu.1bpp"
+	.end
+align 8
+xSaveMenuTilemap:
+	incbin "savemenu.tilemap"
+	.end
+xSaveIcons:
 	.end
 
 section "mapcolors", romx, align[8]
