@@ -56,11 +56,12 @@ Title:: ; load splash screen
 			ld de, _VRAM + $1000
 			ld bc, xSplash1bpp.end - xSplash1bpp
 			call Safe1bppCpy
-		; load save tiles???
+		; load save tiles AND save icons
 			ld hl, xSaveMenu1bpp
 			ld de, _VRAM + $800
-			ld bc, xSaveMenu1bpp.end - xSaveMenu1bpp
+			ld bc, xSaveIcons1bpp.end - xSaveMenu1bpp
 			call Safe1bppCpy
+				assert xSaveMenu1bpp.end == xSaveIcons1bpp
 		; load cursor
 			ld hl, FuckingCursor
 			ld de, _VRAM + $0
@@ -99,12 +100,41 @@ Title:: ; load splash screen
 		ld a, [hPad1.press]
 		and PADF_START
 		jr z, .loop
-	TitleSaves: ; load the funny menu
+	TitleSaves: ; check if this is a valid save *and* load the verification string
+		ld de, Verify
+		ld hl, sSave + (wSave.verify - wSave)
+		lb bc, wSave.verifyEnd - wSave.verify, 0
+		ld a, CART_SRAM_ENABLE
+		ld [rRAMG], a
+	.verifyLoop
+		ld a, [de]
+		cp [hl]
+		ld [hl+], a
+		inc de
+		jr z, .correct
+		inc c
+		.correct
+		dec b
+		jr nz, .verifyLoop
+	; check how many incorrect bytes
+		ld a, $04
+		cp c
+		jr nc, .noErase
+	; erase the save file if 5 or more bytes are wrong
+		xor a
+		ld bc, (sSave.end - sSave) - (wSave.verifyEnd - wSave)
+		call MemSet
+		.noErase
+		xor a
+		ld [rRAMG], a
+	; load the funny menu
 		ld hl, xSaveMenuTilemap
 		ld de, _SCRN1
 		lb bc, 8, 5
 		call SafeRectCopy
 			assert xSaveMenuTilemap.end - 256 <= xSaveMenuTilemap
+		call LoadFileIcons
+	; slide it into view
 		ld a, WX_OFS
 		ldh [rWX], a
 		ld a, 144
@@ -114,23 +144,95 @@ Title:: ; load splash screen
 		ldh [rWY], a
 		cp 144 - 64
 		jr nz, .win
-		.loop
+	; last minute init
+		ld a, 1
+		ld [wCurrentSaveFile], a
+	.loop
 		halt
 		; poll
 			call Joy
+		; advance cursor if select is pressed
+			ld a, [hPad1.press]
+			and PADF_SELECT
+			jr z, .skipAdvance
+			ld a, [wCurrentSaveFile]
+			inc a
+			cp 8
+			jr c, .skipOverflow
+			ld a, 1
+			.skipOverflow
+			ld [wCurrentSaveFile], a
+			.skipAdvance
 		; wait untill start is pressed
 			ld a, [hPad1.press]
 			and PADF_START
 			jr z, .loop
+	; 
+		ld a, [wCurrentSaveFile]
+		ld b, a
+		add low(wSaveFileState - 1)
+		ld l, a
+		ld h, high(wSaveFileState)
+		ld a, [hl]
+		cp SAVE_EMPTY
+		jr nz, .notEmpty
+		ld a, [wCurrentSaveFile]
+		call CreateSave
+		call LoadFileIcons
+		jp .loop
+		.notEmpty
+		cp SAVE_VALID
+		jp nz, .loop
 	; clear map
 		xor a
 		ld hl, _SCRN0
 		ld bc, (_SCRN1 - _SCRN0) * 2
 		call SafeSet
 	; load save
-		ld a, 1
+		ld a, [wCurrentSaveFile]
 		call LoadSave
 	jp Main
+
+LoadFileIcons: ; check and load state icons
+	; check save states
+		ld hl, wSaveFileState + 6
+		ld a, 7
+		.stateLoop
+		push af
+		push hl
+		call VerifySave
+		pop hl
+		ld [hl-], a
+		pop af
+		dec a
+		jr nz, .stateLoop
+	; display
+		ld de, _SCRN1 + 5
+		ld hl, wSaveFileState
+		ld b, 7
+		.loopIcons
+		; wait for access
+		ldh a, [rSTAT]
+		and STATF_BUSY
+		jr nz, .loopIcons
+		; fetch the icon
+		ld a, [hl+]
+		add a ; an icon is 2 tiles wide
+		add low((xSaveIcons1bpp - xSaveMenu1bpp) >> 3) + $80 ; offset
+		; load both halves into the screen
+		ld [de], a
+		inc a
+		inc e
+		ld [de], a
+		; advance de to the next row
+		ld a, e
+		add SCRN_VX_B - 1
+		ld e, a
+		; dec counter
+		dec b
+		jr nz, .loopIcons
+	; done
+	ret
 
 FuckingCursor:
 	db %00000000
@@ -143,9 +245,9 @@ FuckingCursor:
 	db %00000000
 	.end
 
-section "savestate", wram0
-wSaveFileState: ds 7 ; 1 byte for each file
+section "savestate", wram0, align[3]
 wCurrentSaveFile: ds 1 ; 1 byte for the currently selected file
+wSaveFileState: ds 7 ; 1 byte for each file
 
 	/* clear save if select is pressed
 		ld a, [hPad1.press]
@@ -200,7 +302,7 @@ Main::
 		xor a
 		ldh [rWY], a
 	; load vMapText tilemap
-		ld e, low(vMapText>>4)
+		ld e, low(vMapText >> 4)
 		ld hl, $9a00
 		lb bc, 16, 16
 	.copyLoop
@@ -307,6 +409,7 @@ Pause::
 		cp a, WX_OFS + 0
 		jr nz, .win
 	; save
+		ld a, [wCurrentSaveFile]
 		call SaveSave
 	; 
 PauseLoop::
@@ -693,6 +796,9 @@ xSplashTilemap:
 	.end
 xSaveMenu1bpp:
 	incbin "savemenu.1bpp"
+	.end
+xSaveIcons1bpp:
+	incbin "saveicons.1bpp"
 	.end
 align 8
 xSaveMenuTilemap:

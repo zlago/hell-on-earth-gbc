@@ -17,6 +17,6 @@ if def(VERIFY) == 0
 ; save verification outputs
 rsreset
 def SAVE_VALID    rb ; save is valid
-def SAVE_EMPTY    rb ; file is empty
 def SAVE_CHECKSUM rb ; checksum doesnt match
 def SAVE_OLD      rb ; save version mismatch
+def SAVE_EMPTY    rb ; file is empty

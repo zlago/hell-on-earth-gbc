@@ -82,6 +82,7 @@ CreateSave:: ; a - file to save to
 		ld hl, wSaveFile
 		ld b, 0
 			assert wSaveFile.end - wSaveFile == $100
+		xor a
 		call ShortSet
 	; set version
 		ld a, SAVE_VERSION
@@ -206,10 +207,10 @@ Verify::
 	assert @ - Verify <= 16
 
 section "saveshadow", wram0, align[8]
-wSave:
-	.verify ds 16 ; verification string
-	.verifyEnd
-	.end
+wSave::
+	.verify:: ds 16 ; verification string
+	.verifyEnd::
+	.end::
 
 section "savefileshadow", wram0, align[8]
 wSaveFile::
@@ -242,6 +243,7 @@ sSave::
 	.5:: ds wSaveFile.end - wSaveFile
 	.6:: ds wSaveFile.end - wSaveFile
 	.7:: ds wSaveFile.end - wSaveFile
+	.end::
 	align 8
 
 /* AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA */
