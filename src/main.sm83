@@ -17,8 +17,7 @@ include "macros.inc"
 include "defines.inc"
 
 section "icrash", rom0[$38]
-iCrash::
-	ld b, b
+iCrash:
 	jr @
 
 section "ivblank", rom0[$40]
@@ -138,17 +137,24 @@ Title:: ; load splash screen
 		ld a, WX_OFS
 		ldh [rWX], a
 		ld a, 144
-		.win
+		.winIn
 		halt
 		sub 8
 		ldh [rWY], a
 		cp 144 - 64
-		jr nz, .win
+		jr nz, .winIn
 	; last minute init
 		ld a, 1
 		ld [wCurrentSaveFile], a
+		ld a, 8
+		ld [wSOAM + 1], a
+		ld a, 8 + $58
+		ld [wSOAM + 0], a
 	.loop
 		halt
+		; 
+			ld a, high(wSOAM)
+			call hDMA
 		; poll
 			call Joy
 		; advance cursor if select is pressed
@@ -156,19 +162,38 @@ Title:: ; load splash screen
 			and PADF_SELECT
 			jr z, .skipAdvance
 			ld a, [wCurrentSaveFile]
+			and %111
 			inc a
-			cp 8
-			jr c, .skipOverflow
-			ld a, 1
-			.skipOverflow
 			ld [wCurrentSaveFile], a
+			add a
+			add a
+			add a
+			add $58
+			ld [wSOAM + 0], a
 			.skipAdvance
 		; wait untill start is pressed
 			ld a, [hPad1.press]
 			and PADF_START
 			jr z, .loop
-	; 
+	; check if the selected option is 'back'
 		ld a, [wCurrentSaveFile]
+		cp 8
+		jr nz, .noBack
+		; if so, go back
+		xor a
+		ld [wSOAM + 0], a
+		call hDMA
+		; slide window out
+		ld a, 144 - 64
+		.winOut
+		halt
+		add 8
+		ldh [rWY], a
+		cp 144
+		jr nz, .winOut
+		jp TitleMenu
+		.noBack
+	; otherwise, check the state of the selected file
 		ld b, a
 		add low(wSaveFileState - 1)
 		ld l, a
