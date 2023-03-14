@@ -58,9 +58,10 @@ Title:: ; load splash screen
 		; load save tiles AND save icons
 			ld hl, xSaveMenu1bpp
 			ld de, _VRAM + $800
-			ld bc, xSaveIcons1bpp.end - xSaveMenu1bpp
-			call Safe1bppCpy
+			ld bc, xSaveNumbers1bpp.end - xSaveMenu1bpp
 				assert xSaveMenu1bpp.end == xSaveIcons1bpp
+				assert xSaveIcons1bpp.end == xSaveNumbers1bpp
+			call Safe1bppCpy
 		; load cursor
 			ld hl, FuckingCursor
 			ld de, _VRAM + $0
@@ -199,23 +200,124 @@ Title:: ; load splash screen
 		ld l, a
 		ld h, high(wSaveFileState)
 		ld a, [hl]
+		; check if the file is empty
 		cp SAVE_EMPTY
 		jr nz, .notEmpty
+		; if so, make an empty file
 		ld a, [wCurrentSaveFile]
 		call CreateSave
 		call LoadFileIcons
 		jp .loop
-		.notEmpty
+		.notEmpty ; if not, check if its valid
 		cp SAVE_VALID
 		jp nz, .loop
+	; and if so, load the save and display its stats
+		; load save
+		ld a, [wCurrentSaveFile]
+		call LoadSave
+		; load menu with stats
+		ld hl, xSaveMenuTilemap + 9 + 3
+		ld de, _SCRN1 + 9 + 3
+		lb bc, 7, 10 - 3
+		call SafeRectCopy
+		; load stats as sprites
+			; first cronch into numbers
+				ld a, $ff - (low((xSaveNumbers1bpp - xSaveMenu1bpp) >> 3) + $80) ; temp
+				ld hl, hTemp
+				; map
+					ld [hl+], a
+					ld [hl+], a
+					ld [hl+], a
+				; flags
+					ld [hl+], a
+					ld [hl+], a
+					ld [hl+], a
+				; time
+					; hours
+						ld a, [wSaveFile.time + 3]
+						; hours 100s
+						ld b, -1
+						.timeHours100
+						inc b
+						sub 100
+						jr nc, .timeHours100
+						add 100
+						ld [hl], b
+						inc hl
+						; hours 10s
+						ld b, -1
+						.timeHours10
+						inc b
+						sub 10
+						jr nc, .timeHours10
+						add 10
+						ld [hl], b
+						inc hl
+						; hours 1s
+						ld [hl+], a
+					; minutes, seconds, thirds
+						ld de, wSaveFile.time + 2
+						ld b, 3
+						ld c, $0f
+						.60Loop
+						ld a, [de]
+						swap a
+						and c
+						ld [hl+], a
+						ld a, [de]
+						and c
+						ld [hl+], a
+						dec de
+						dec b
+						jr nz, .60Loop
+			; offset all to point at number tiles
+			ld hl, hTemp
+			ld b, 15
+			.offLoop
+			ld a, [hl]
+			add low((xSaveNumbers1bpp - xSaveMenu1bpp) >> 3) + $80
+			ld [hl+], a
+			dec b
+			jr nz, .offLoop
+			; then load them into shadow OAM
+			ld de, wSOAM + 8
+			ld hl, FifteenDamnSprites
+			lb bc, 15, low(hTemp)
+			.objLoop
+			ld a, [hl+]
+			ld [de], a
+			inc e
+			ld a, [hl+]
+			ld [de], a
+			inc e
+			ldh a, [c]
+			inc c
+			ld [de], a
+			inc e
+			inc e
+			dec b
+			jr nz, .objLoop
+			ld a, high(wSOAM)
+			call hDMA
+		.hold
+		halt
+		call Joy
+		ld a, [hPad1.press]
+		and PADF_START
+		jr z, .hold
+		; load the map
 	; clear map
 		xor a
 		ld hl, _SCRN0
 		ld bc, (_SCRN1 - _SCRN0) * 2
 		call SafeSet
-	; load save
-		ld a, [wCurrentSaveFile]
-		call LoadSave
+	; clear OAM
+		xor a
+		ld hl, wSOAM
+		ld b, wSOAM.end - wSOAM
+		call ShortSet
+		ld a, HIGH(wSOAM)
+		call hDMA
 	jp Main
 
 LoadFileIcons: ; check and load state icons
@@ -268,6 +370,14 @@ FuckingCursor:
 	db %00101000
 	db %00110000
 	db %00000000
+	.end
+
+FifteenDamnSprites:
+	dw $7c78, $8078, $8478, $7c80, $8080, $8480, $7c88, $8088, $8488, $8c88, $9088, $8490, $8890, $9090, $9490
+
+section "temp", hram
+hTemp:
+	ds 16
 	.end
 
 section "savestate", wram0, align[3]
@@ -824,6 +934,9 @@ xSaveMenu1bpp:
 	.end
 xSaveIcons1bpp:
 	incbin "saveicons.1bpp"
+	.end
+xSaveNumbers1bpp:
+	incbin "savenumbers.1bpp"
 	.end
 align 8
 xSaveMenuTilemap:

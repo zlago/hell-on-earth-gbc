@@ -28,7 +28,7 @@ HDR_VER = 0
 # dependencies
 ASM_REQS = $(shell find src/inc/ -name '*.inc')
 LINK_REQS = $(patsubst src/%.sm83,obj/%.o,$(shell find src/ -name '*.sm83'))
-GFX_REQS = res/map.bin res/tileset.1bpp res/player.2bpp res/splash.1bpp res/flavor.bin res/mapmenu.tilemap res/savemenu.1bpp res/saveicons.1bpp
+GFX_REQS = res/map.bin res/tileset.1bpp res/player.2bpp res/splash.1bpp res/flavor.bin res/mapmenu.tilemap res/savemenu.1bpp res/saveicons.1bpp res/savenumbers.1bpp
 
 .PHONY: all release dev clean
 
@@ -75,6 +75,9 @@ res/splash.1bpp: src/res/splash.png res/
 
 res/savemenu.1bpp: src/res/savemenu.png res/
 	rgbgfx -b 128 -u -d 1 -c "#000, #fff, #00f, #0ff" -o $@ -t res/savemenu.tilemap $<
+
+res/savenumbers.1bpp: src/res/savenumbers.png res/
+	rgbgfx -d 1 -c "#000, #fff, #00f, #0ff" -o $@ $<
 
 res/saveicons.1bpp: src/res/saveicons.png res/
 	rgbgfx -d 1 -c "#000, #fff, #00f, #0ff" -o $@ $<
